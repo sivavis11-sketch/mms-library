@@ -45,7 +45,82 @@ async function apiGet(action, params) {
 
 async function apiPost(action, payload) {
   if (!apiConfigured()) throw new Error('CONFIG_MISSING');
-  return jsonpRequest({ api: '1', action, payload: JSON.stringify(payload || {}) });
+
+  return new Promise((resolve, reject) => {
+    const iframeName =
+      'api_post_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2);
+
+    // Hidden iframe receives the Apps Script POST response.
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    // Cross-origin form POST avoids browser CORS restrictions.
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = API_URL;
+    form.target = iframeName;
+    form.style.display = 'none';
+
+    const payloadInput = document.createElement('input');
+    payloadInput.type = 'hidden';
+    payloadInput.name = 'payload';
+    payloadInput.value = JSON.stringify({
+      action: action,
+      payload: payload || {}
+    });
+
+    form.appendChild(payloadInput);
+    document.body.appendChild(form);
+
+    let completed = false;
+
+    function cleanup() {
+      setTimeout(() => {
+        try { form.remove(); } catch (err) {}
+        try { iframe.remove(); } catch (err) {}
+      }, 500);
+    }
+
+    function finish() {
+      if (completed) return;
+      completed = true;
+      cleanup();
+      resolve({ ok: true });
+    }
+
+    iframe.onload = finish;
+
+    iframe.onerror = () => {
+      if (completed) return;
+      completed = true;
+      cleanup();
+      reject(new Error('Unable to send request to the library server.'));
+    };
+
+    try {
+      form.submit();
+
+      // Apps Script may redirect during POST. This fallback prevents
+      // the save button from remaining stuck if the browser does not
+      // expose the final iframe load event.
+      setTimeout(() => {
+        if (!completed) finish();
+      }, 3000);
+
+    } catch (err) {
+      if (!completed) {
+        completed = true;
+        cleanup();
+        reject(err);
+      }
+    }
+  });
+}
 }
 
 /* ---------------- helpers ---------------- */
