@@ -121,7 +121,6 @@ async function apiPost(action, payload) {
     }
   });
 }
-}
 
 /* ---------------- helpers ---------------- */
 function todayStr() {
