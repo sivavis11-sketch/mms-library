@@ -17,25 +17,35 @@ function apiConfigured() {
   return typeof API_URL === 'string' && API_URL && !API_URL.includes('PASTE_YOUR');
 }
 
+function jsonpRequest(params) {
+  return new Promise((resolve, reject) => {
+    const cb = '__mmsPwaCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Request timed out')); }, 15000);
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cb];
+      script.remove();
+    }
+    window[cb] = (json) => {
+      cleanup();
+      if (!json || !json.ok) reject(new Error((json && json.error) || 'Request failed'));
+      else resolve(json.data);
+    };
+    script.onerror = () => { cleanup(); reject(new Error('Failed to reach library server')); };
+    script.src = API_URL + '?' + new URLSearchParams({ ...params, callback: cb }).toString();
+    document.head.appendChild(script);
+  });
+}
+
 async function apiGet(action, params) {
   if (!apiConfigured()) throw new Error('CONFIG_MISSING');
-  const qs = new URLSearchParams({ api: '1', action, ...(params || {}) });
-  const res = await fetch(API_URL + '?' + qs.toString());
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'Request failed');
-  return json.data;
+  return jsonpRequest({ api: '1', action, ...(params || {}) });
 }
 
 async function apiPost(action, payload) {
   if (!apiConfigured()) throw new Error('CONFIG_MISSING');
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, payload })
-  });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'Request failed');
-  return json.data;
+  return jsonpRequest({ api: '1', action, payload: JSON.stringify(payload || {}) });
 }
 
 /* ---------------- helpers ---------------- */
