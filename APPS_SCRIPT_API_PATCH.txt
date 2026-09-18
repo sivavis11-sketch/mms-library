@@ -1,0 +1,166 @@
+MMS LIBRARY PWA — Apps Script API PATCH
+
+Add this code in the existing Code.gs by REPLACING the current doGet() function with the block below and adding the helper functions immediately after it.
+
+IMPORTANT:
+- Do not create a new Apps Script project.
+- Do not change SPREADSHEET_ID.
+- Do not change the existing database functions.
+- After saving, deploy a NEW VERSION of the existing Web App deployment.
+
+PASTE THIS:
+
+function doGet(e) {
+  if (e && e.parameter && e.parameter.api === '1') {
+    return handleApiGet_(e);
+  }
+
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle(APP.NAME)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+}
+
+function handleApiGet_(e) {
+  const p = e.parameter || {};
+  const callback = String(p.callback || '');
+
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(callback)) {
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:'Invalid callback'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    let data;
+
+    switch (String(p.action || '')) {
+      case 'dashboard':
+        data = apiDashboard_(p.date || today_());
+        break;
+      case 'weeklyTimetable':
+        data = apiWeeklyTimetable_(p.date || today_());
+        break;
+      case 'sections':
+        data = apiSections_(p.grade || '');
+        break;
+      case 'students':
+        data = getStudents({
+          search:p.search || '',
+          grade:p.grade || '',
+          section:p.section || ''
+        });
+        break;
+      case 'studentProfile':
+        data = getStudentProfile(p.admissionNumber || '');
+        break;
+      case 'attendanceForClass':
+        data = getAttendanceForClass(
+          p.dateStr || today_(),
+          p.grade || '',
+          p.section || ''
+        );
+        break;
+      case 'reports':
+        data = getReports(p.month || today_().slice(0,7));
+        break;
+      case 'saveAttendance':
+        data = saveAttendance(JSON.parse(p.payload || '{}'));
+        break;
+      case 'saveReadingAssessment':
+        data = saveReadingAssessment(JSON.parse(p.payload || '{}'));
+        break;
+      default:
+        throw new Error('Unknown API action: ' + String(p.action || ''));
+    }
+
+    return jsonp_(callback, {ok:true,data:data});
+
+  } catch (err) {
+    return jsonp_(callback, {
+      ok:false,
+      error:String(err && err.message || err)
+    });
+  }
+}
+
+function jsonp_(callback, payload) {
+  return ContentService
+    .createTextOutput(callback + '(' + JSON.stringify(payload) + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function apiSections_(grade) {
+  const seen = {};
+
+  getStudents({grade:String(grade)}).forEach(s => {
+    if (s.section) seen[String(s.section)] = true;
+  });
+
+  return Object.keys(seen).sort();
+}
+
+function apiTime_(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(
+      value,
+      Session.getScriptTimeZone() || 'Asia/Kolkata',
+      'HH:mm'
+    );
+  }
+
+  const text = String(value || '').trim();
+  const m = text.match(/^(\d{1,2}):(\d{2})/);
+
+  return m
+    ? String(m[1]).padStart(2,'0') + ':' + m[2]
+    : text;
+}
+
+function apiTimetable_(rows) {
+  return rows.map(t => ({
+    day:String(t.day || ''),
+    date:t.date || '',
+    start:apiTime_(t.start),
+    end:apiTime_(t.end),
+    grade:String(t.grade || ''),
+    section:String(t.section || ''),
+    classSection:String(
+      t.classSection || ('Grade ' + t.grade + ' - ' + t.section)
+    ),
+    note:String(t.note || '')
+  }));
+}
+
+function apiDashboard_(dateStr) {
+  const d = getDashboard(dateStr);
+  d.timetable = apiTimetable_(d.timetable || []);
+  return d;
+}
+
+function apiWeeklyTimetable_(dateStr) {
+  const base = new Date(dateStr + 'T12:00:00');
+  const day = base.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const out = [];
+
+  for (let i=0; i<7; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + mondayOffset + i);
+
+    const ds = Utilities.formatDate(
+      d,
+      Session.getScriptTimeZone() || 'Asia/Kolkata',
+      'yyyy-MM-dd'
+    );
+
+    out.push({
+      date:ds,
+      day:dayName_(ds),
+      classes:apiTimetable_(getTimetable(ds))
+    });
+  }
+
+  return out;
+}
+
+END OF PATCH
