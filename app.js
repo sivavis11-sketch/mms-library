@@ -17,30 +17,117 @@ function apiConfigured() {
   return typeof API_URL === 'string' && API_URL && !API_URL.includes('PASTE_YOUR');
 }
 
-function jsonpRequest(params) {
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const API_TIMEOUT_MS = 9000;
+const API_RETRIES = 2;
+const pendingGets = new Map();
+const sectionCache = new Map();
+const SECTION_CACHE_MS = 5 * 60 * 1000;
+
+function jsonpRequest(params, attempt = 0) {
   return new Promise((resolve, reject) => {
     const cb = '__mmsPwaCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     const script = document.createElement('script');
-    const timeout = setTimeout(() => { cleanup(); reject(new Error('Request timed out')); }, 15000);
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Request timed out'));
+    }, API_TIMEOUT_MS);
+
     function cleanup() {
       clearTimeout(timeout);
-      delete window[cb];
-      script.remove();
+      try { delete window[cb]; } catch (err) {}
+      try { script.remove(); } catch (err) {}
     }
+
     window[cb] = (json) => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      if (!json || !json.ok) reject(new Error((json && json.error) || 'Request failed'));
-      else resolve(json.data);
+
+      if (!json || !json.ok) {
+        reject(new Error((json && json.error) || 'Request failed'));
+        return;
+      }
+
+      resolve(json.data);
     };
-    script.onerror = () => { cleanup(); reject(new Error('Failed to reach library server')); };
-    script.src = API_URL + '?' + new URLSearchParams({ ...params, callback: cb }).toString();
+
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Failed to reach library server'));
+    };
+
+    const query = new URLSearchParams({
+      ...params,
+      callback: cb,
+      _t: Date.now().toString()
+    });
+
+    script.src = API_URL + '?' + query.toString();
     document.head.appendChild(script);
   });
 }
 
 async function apiGet(action, params) {
   if (!apiConfigured()) throw new Error('CONFIG_MISSING');
-  return jsonpRequest({ api: '1', action, ...(params || {}) });
+
+  const requestParams = { api: '1', action, ...(params || {}) };
+  const key = JSON.stringify(requestParams);
+
+  // Reuse an identical request already in progress.
+  if (pendingGets.has(key)) return pendingGets.get(key);
+
+  // Sections change rarely, so keep them briefly in memory.
+  if (action === 'sections' && requestParams.grade) {
+    const cached = sectionCache.get(String(requestParams.grade));
+    if (cached && Date.now() - cached.time < SECTION_CACHE_MS) {
+      return cached.data;
+    }
+  }
+
+  const request = (async () => {
+    let lastError;
+
+    for (let attempt = 0; attempt <= API_RETRIES; attempt++) {
+      try {
+        const data = await jsonpRequest(requestParams, attempt);
+
+        if (action === 'sections' && requestParams.grade) {
+          sectionCache.set(String(requestParams.grade), {
+            time: Date.now(),
+            data
+          });
+        }
+
+        return data;
+      } catch (err) {
+        lastError = err;
+
+        if (attempt < API_RETRIES) {
+          // Short backoff: recover from occasional Apps Script/network delays
+          // without making the user press reload.
+          await sleep(600 + attempt * 900);
+        }
+      }
+    }
+
+    throw lastError || new Error('Unable to load library data');
+  })();
+
+  pendingGets.set(key, request);
+
+  try {
+    return await request;
+  } finally {
+    pendingGets.delete(key);
+  }
 }
 
 async function apiPost(action, payload) {
@@ -53,13 +140,11 @@ async function apiPost(action, payload) {
       '_' +
       Math.random().toString(36).slice(2);
 
-    // Hidden iframe receives the Apps Script POST response.
     const iframe = document.createElement('iframe');
     iframe.name = iframeName;
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
-    // Cross-origin form POST avoids browser CORS restrictions.
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = API_URL;
@@ -105,9 +190,6 @@ async function apiPost(action, payload) {
     try {
       form.submit();
 
-      // Apps Script may redirect during POST. This fallback prevents
-      // the save button from remaining stuck if the browser does not
-      // expose the final iframe load event.
       setTimeout(() => {
         if (!completed) finish();
       }, 3000);
