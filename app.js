@@ -523,7 +523,7 @@ async function viewStudentForm(content, mode, admissionNumber) {
   const eyebrow = mode === 'edit' ? 'Student management' : 'New record';
 
   content.innerHTML = `
-    <div class="link-back" onclick="navigate('${mode === 'edit' ? 'profile' : 'students'}'${mode === 'edit' ? ",{id:'" + esc(admissionNumber) + "'}" : ''})">← Back</div>
+    <div class="link-back" onclick="${mode === 'edit' ? `navigate('profile',{id:'${esc(admissionNumber)}'})` : `navigate('students')`}">← Back</div>
     <div class="page-head">
       <div class="eyebrow">${eyebrow}</div>
       <h1>${title}</h1>
@@ -549,7 +549,7 @@ async function viewStudentForm(content, mode, admissionNumber) {
         <div class="field"><label>Section</label><select id="stuSectionForm"><option value="">Select grade first</option></select></div>
       </div>
       <div class="form-actions">
-        <button class="btn ghost" onclick="navigate('${mode === 'edit' ? 'profile' : 'students}'${mode === 'edit' ? ",{id:'" + esc(admissionNumber) + "'}" : ''})">Cancel</button>
+        <button class="btn ghost" onclick="${mode === 'edit' ? `navigate('profile',{id:'${esc(admissionNumber)}'})` : `navigate('students')`}">Cancel</button>
         <button class="btn" id="studentSaveBtn">${mode === 'edit' ? 'Save changes' : 'Add student'}</button>
       </div>
     </div>`;
