@@ -13,7 +13,20 @@ const state = {
 };
 
 /* ---------------- API client ---------------- */
+/*
+ * MMS Library supports two runtimes:
+ * 1) GitHub/PWA: cross-origin JSONP + form POST to the deployed Apps Script API.
+ * 2) Apps Script HtmlService: use google.script.run directly. This avoids
+ *    the HtmlService sandbox/CSP blocking the JSONP <script> request.
+ */
+function appsScriptRuntime() {
+  return typeof google !== 'undefined' &&
+    google.script &&
+    google.script.run;
+}
+
 function apiConfigured() {
+  if (appsScriptRuntime()) return true;
   return typeof API_URL === 'string' && API_URL && !API_URL.includes('PASTE_YOUR');
 }
 
@@ -26,6 +39,24 @@ const API_RETRIES = 2;
 const pendingGets = new Map();
 const sectionCache = new Map();
 const SECTION_CACHE_MS = 5 * 60 * 1000;
+
+function appsScriptGet(action, params) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(err => reject(new Error(String(err && err.message || err || 'Apps Script request failed'))))
+      .libraryApiGet(action, params || {});
+  });
+}
+
+function appsScriptPost(action, payload) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(err => reject(new Error(String(err && err.message || err || 'Apps Script request failed'))))
+      .libraryApiPost(action, payload || {});
+  });
+}
 
 function jsonpRequest(params, attempt = 0) {
   return new Promise((resolve, reject) => {
@@ -78,13 +109,43 @@ function jsonpRequest(params, attempt = 0) {
 async function apiGet(action, params) {
   if (!apiConfigured()) throw new Error('CONFIG_MISSING');
 
+  if (appsScriptRuntime()) {
+    const requestParams = { ...(params || {}) };
+    const key = 'apps-script:' + action + ':' + JSON.stringify(requestParams);
+
+    if (pendingGets.has(key)) return pendingGets.get(key);
+
+    if (action === 'sections' && requestParams.grade) {
+      const cached = sectionCache.get(String(requestParams.grade));
+      if (cached && Date.now() - cached.time < SECTION_CACHE_MS) {
+        return cached.data;
+      }
+    }
+
+    const request = (async () => {
+      const data = await appsScriptGet(action, requestParams);
+      if (action === 'sections' && requestParams.grade) {
+        sectionCache.set(String(requestParams.grade), {
+          time: Date.now(),
+          data
+        });
+      }
+      return data;
+    })();
+
+    pendingGets.set(key, request);
+    try {
+      return await request;
+    } finally {
+      pendingGets.delete(key);
+    }
+  }
+
   const requestParams = { api: '1', action, ...(params || {}) };
   const key = JSON.stringify(requestParams);
 
-  // Reuse an identical request already in progress.
   if (pendingGets.has(key)) return pendingGets.get(key);
 
-  // Sections change rarely, so keep them briefly in memory.
   if (action === 'sections' && requestParams.grade) {
     const cached = sectionCache.get(String(requestParams.grade));
     if (cached && Date.now() - cached.time < SECTION_CACHE_MS) {
@@ -109,10 +170,7 @@ async function apiGet(action, params) {
         return data;
       } catch (err) {
         lastError = err;
-
         if (attempt < API_RETRIES) {
-          // Short backoff: recover from occasional Apps Script/network delays
-          // without making the user press reload.
           await sleep(600 + attempt * 900);
         }
       }
@@ -132,6 +190,10 @@ async function apiGet(action, params) {
 
 async function apiPost(action, payload) {
   if (!apiConfigured()) throw new Error('CONFIG_MISSING');
+
+  if (appsScriptRuntime()) {
+    return appsScriptPost(action, payload || {});
+  }
 
   return new Promise((resolve, reject) => {
     const iframeName =
@@ -189,11 +251,9 @@ async function apiPost(action, payload) {
 
     try {
       form.submit();
-
       setTimeout(() => {
         if (!completed) finish();
       }, 3000);
-
     } catch (err) {
       if (!completed) {
         completed = true;
