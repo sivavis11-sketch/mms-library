@@ -743,13 +743,16 @@ function messageBridgeRequest(params) {
 }
 
 async function apiGetWithPwaFallback(params) {
+  // Prefer the Apps Script iframe bridge on mobile/PWA. It uses
+  // google.script.run inside the Apps Script origin and avoids JSONP
+  // redirect/script execution issues in installed browsers.
   try {
-    return await jsonpRequest(params);
-  } catch (jsonpError) {
+    return await messageBridgeRequest(params);
+  } catch (bridgeError) {
     try {
-      return await messageBridgeRequest(params);
-    } catch (bridgeError) {
-      throw jsonpError;
+      return await jsonpRequest(params);
+    } catch (jsonpError) {
+      throw bridgeError;
     }
   }
 }
