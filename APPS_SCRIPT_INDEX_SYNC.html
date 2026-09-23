@@ -6,13 +6,12 @@
 <title>MMS Library</title>
 <meta name="theme-color" content="#FF7426">
 <meta name="description" content="Library attendance and reading assessment tracking for Mathakondapalli Model School.">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MMS Library">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>:root{
   --bg-start:#F7D8CB;
   --bg-mid:#F0D9E8;
@@ -412,28 +411,41 @@ svg{width:20px;height:20px;display:block}
 @media(max-width:980px){.kpi-bento{grid-template-columns:repeat(2,minmax(0,1fr))}.main-bento{grid-template-columns:1fr}.live-card{min-height:210px}}
 @media(max-width:640px){.library-welcome.premium-hero{padding:1.05rem;min-height:180px}.welcome-copy h1{font-size:1.55rem}.welcome-person{min-width:0;width:100%;margin-top:.9rem}.library-welcome.premium-hero{display:block}.kpi-bento{grid-template-columns:1fr 1fr;gap:.65rem}.kpi-card{min-height:105px;padding:.75rem}.kpi-icon{width:40px;height:40px}.kpi-copy strong{font-size:1.3rem}.kpi-copy small{font-size:.55rem}.kpi-arrow{display:none}.action-bento,.bottom-bento{grid-template-columns:1fr}.action-bento .dashboard-action{min-height:120px}}
 @media(max-width:430px){.kpi-bento{grid-template-columns:1fr}.kpi-card{min-height:94px}.kpi-copy strong{font-size:1.45rem}}
+
+/* ===== FINAL APP SHELL: NO SIDEBAR ===== */
+#app{max-width:1440px;width:100%;padding:1rem;display:block;min-height:100vh}
+#sidebar{display:none!important}
+#main{width:100%;min-width:0}
+#topbar{width:100%;max-width:none}
+.screen-menu{
+  width:100%;display:flex;align-items:center;gap:.45rem;padding:.45rem;
+  margin-bottom:.85rem;border-radius:22px;background:rgba(255,255,255,.54);
+  border:1px solid rgba(255,255,255,.78);box-shadow:var(--shadow-soft);
+  backdrop-filter:blur(18px)
+}
+.screen-menu button{
+  display:flex;align-items:center;gap:.45rem;padding:.65rem .9rem;border-radius:15px;
+  background:transparent;color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer
+}
+.screen-menu button:hover,.screen-menu button.active{
+  background:#fff;color:var(--orange-deep);box-shadow:var(--shadow-soft)
+}
+.screen-menu button span{font-size:1rem;font-weight:800}
+@media(max-width:700px){.screen-menu{display:none}}
 </style>
 </head>
 <body>
-<div id="app">
-  <nav id="sidebar">
-    <div class="brand">
-      <span class="apps-script-mark">MMS</span>
-      <div>
-        <div class="name">MMS Library</div>
-        <div class="sub">Mathakondapalli Model School</div>
-      </div>
-    </div>
-    <div class="navlink" data-route="dashboard">Home</div>
-    <div class="navlink" data-route="timetable">Timetable</div>
-    <div class="navlink" data-route="students">Students</div>
-    <div class="navlink" data-route="attendance">Attendance</div>
-    <div class="navlink" data-route="reports">Reports</div>
-  </nav>
-  <main id="main">
-    <div id="topbar">
+
+<div id="app"><main id="main">
+    <div id="desktopMenu" class="screen-menu">
+  <button data-route="dashboard"><span>⌂</span>Home</button>
+  <button data-route="timetable"><span>◷</span>Timetable</button>
+  <button data-route="students"><span>♙</span>Students</button>
+  <button data-route="attendance"><span>✓</span>Attendance</button>
+  <button data-route="reports"><span>▥</span>Reports</button>
+</div><div id="topbar">
       <div class="brand-mobile">
-        <span class="apps-script-mark">MMS</span>
+        <img src="" alt="MMS Library">
         <div class="name">MMS Library</div>
       </div>
       <div class="date" id="topbarDate"></div>
@@ -441,39 +453,18 @@ svg{width:20px;height:20px;display:block}
     <div id="content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
   </main>
 </div>
+
 <div id="tabbar">
-  <div class="tab" data-route="dashboard">Home</div>
-  <div class="tab" data-route="timetable">Timetable</div>
-  <div class="tab" data-route="students">Students</div>
-  <div class="tab" data-route="attendance">Attend</div>
-  <div class="tab" data-route="reports">Reports</div>
+  <div class="tab" data-route="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Home</div>
+  <div class="tab" data-route="timetable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>Timetable</div>
+  <div class="tab" data-route="students"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 9c1.7 0 3 1.3 3 3M15 4.2A3 3 0 1 1 15 10"/></svg>Students</div>
+  <div class="tab" data-route="attendance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="2"/></svg>Attend</div>
+  <div class="tab" data-route="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M12 19V5M20 19v-7"/></svg>Reports</div>
 </div>
+
 <div id="toast"></div>
-<script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyefUrMjn2-Wey23T7Fof0XQ_4g2GBsogSh37AyetEo8Rcc4h-uzK9wV6JKGXGPGv8X/exec";
-</script>
-<script>
-/* MMS Library — app shell, router, and views */
 
-const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
-const RUBRIC_LABELS = {
-  fluency:'Fluency', accuracy:'Accuracy', vocabulary:'Vocabulary',
-  comprehension:'Comprehension', expression:'Expression', confidence:'Confidence'
-};
-const GRADES = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-
-const state = {
-  route: 'dashboard',
-  params: {},
-};
-
-/* ---------------- API client ---------------- */
-/*
- * MMS Library supports two runtimes:
- * 1) GitHub/PWA: cross-origin JSONP + form POST to the deployed Apps Script API.
- * 2) Apps Script HtmlService: use google.script.run directly. This avoids
- *    the HtmlService sandbox/CSP blocking the JSONP <script>
-/* MMS Library — app shell, router, and views */
+<script>/* MMS Library — app shell, router, and views */
 
 const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
 const RUBRIC_LABELS = {
@@ -1516,7 +1507,6 @@ function boot() {
   }
 }
 boot();
-
 </script>
 </body>
 </html>
