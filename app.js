@@ -321,6 +321,7 @@ async function render() {
   syncNavActive();
   document.getElementById('topbarDate').textContent = niceDate(todayStr());
   const content = document.getElementById('content');
+  content.dataset.route = state.route;
   if (!apiConfigured() && state.route !== 'dashboard') {
     content.innerHTML = setupBanner();
     return;
@@ -347,6 +348,21 @@ async function render() {
   }
 }
 
+function iconSvg(name) {
+  const paths = {
+    users: '<circle cx="9" cy="8" r="3"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 8.5a3 3 0 0 1 0 5.9M16 14.5c3.1.4 5.2 2.3 5.5 5.5"/>',
+    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v15M8 7h8M8 11h7"/>',
+    calendar: '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v4M16 3v4M8 13h3M13 13h3M8 17h3"/>',
+    document: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h6M9 16h6"/>',
+    chart: '<path d="M4 19V9M12 19V5M20 19v-7"/><path d="M3 19h18"/>',
+    check: '<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="3"/>',
+    activity: '<path d="M3 12h4l2-5 4 10 2-5h6"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    arrow: '<path d="M5 12h13M13 7l5 5-5 5"/>'
+  };
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paths[name] || paths.arrow) + '</svg>';
+}
+
 /* ---------------- DASHBOARD ---------------- */
 async function viewDashboard(content) {
   if (!apiConfigured()) {
@@ -362,16 +378,18 @@ async function viewDashboard(content) {
 
   const d = await apiGet('dashboard', { date: todayStr() });
   const firstClass = d.timetable && d.timetable.length ? d.timetable[0] : null;
+  const totalMarked = Number(d.present || 0) + Number(d.absent || 0);
 
   content.innerHTML = `
-    <section class="library-welcome">
-      <div>
+    <section class="library-welcome premium-hero">
+      <div class="welcome-copy">
         <div class="eyebrow">${esc(String(d.day || '').toUpperCase())} · ${esc(niceDate(todayStr()))}</div>
         <h1>Mathakondapalli<br>Model School</h1>
         <div class="library-wordmark">LIBRARY</div>
+        <p class="hero-tagline">A reader today. A leader tomorrow.</p>
       </div>
       <div class="welcome-person">
-        <div class="welcome-avatar">●</div>
+        <div class="welcome-avatar icon-orb">${iconSvg('sun')}</div>
         <div>
           <div class="welcome-small">Good Morning,</div>
           <div class="welcome-name">Librarian!</div>
@@ -380,81 +398,99 @@ async function viewDashboard(content) {
       </div>
     </section>
 
-    <section class="dashboard-card today-library">
-      <div class="dash-card-head">
-        <div>
-          <h2>Today's Library</h2>
-          <p>Classes scheduled for today</p>
-        </div>
-        <span class="pill amber">${d.timetable.length} classes</span>
-      </div>
-      ${firstClass ? `
-        <div class="today-session">
-          <div class="session-time"><strong>${esc(firstClass.start)}</strong><strong>${esc(firstClass.end)}</strong></div>
-          <div class="session-icon">▣</div>
-          <div class="session-info">
-            <strong>${esc(firstClass.classSection)}</strong>
-            <span>Open attendance for this class</span>
+    <section class="dashboard-bento kpi-bento">
+      <article class="dashboard-card kpi-card kpi-orange">
+        <div class="kpi-icon">${iconSvg('users')}</div>
+        <div class="kpi-copy"><span>Total Students</span><strong>—</strong><small>Student directory</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+      <article class="dashboard-card kpi-card kpi-green">
+        <div class="kpi-icon">${iconSvg('book')}</div>
+        <div class="kpi-copy"><span>Active Readers</span><strong>—</strong><small>Reading tracking</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+      <article class="dashboard-card kpi-card kpi-orange">
+        <div class="kpi-icon">${iconSvg('calendar')}</div>
+        <div class="kpi-copy"><span>Today's Attendance</span><strong>${d.present || 0}</strong><small>of ${totalMarked || 0} students marked</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+      <article class="dashboard-card kpi-card kpi-green">
+        <div class="kpi-icon">${iconSvg('document')}</div>
+        <div class="kpi-copy"><span>Reading Records</span><strong>0</strong><small>Assessment records</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+    </section>
+
+    <section class="dashboard-bento main-bento">
+      <article class="dashboard-card today-library bento-large">
+        <div class="dash-card-head">
+          <div class="heading-with-icon">
+            <span class="section-icon orange-icon">${iconSvg('calendar')}</span>
+            <div><h2>Today's Library</h2><p>Classes scheduled for today</p></div>
           </div>
-          <button class="btn" onclick="navigate('attendance',{grade:'${esc(firstClass.grade)}',section:'${esc(firstClass.section)}'})">Open</button>
+          <span class="pill amber">${d.timetable.length} classes</span>
         </div>
-      ` : '<div class="empty">No library sessions scheduled today.</div>'}
+        ${firstClass ? `
+          <div class="today-session premium-session">
+            <div class="session-time"><strong>${esc(firstClass.start)}</strong><strong>${esc(firstClass.end)}</strong></div>
+            <div class="session-icon green-icon">${iconSvg('book')}</div>
+            <div class="session-info">
+              <strong>${esc(firstClass.classSection)}</strong>
+              <span>Open attendance for this class</span>
+            </div>
+            <button class="btn" onclick="navigate('attendance',{grade:'${esc(firstClass.grade)}',section:'${esc(firstClass.section)}'})">Open <span>${iconSvg('arrow')}</span></button>
+          </div>
+        ` : '<div class="empty">No library sessions scheduled today.</div>'}
+      </article>
+
+      <article class="dashboard-card live-card">
+        <div class="live-top"><span class="section-icon white-icon">${iconSvg('activity')}</span><span class="live-badge">NOW</span></div>
+        <div class="live-title">Ongoing Activity</div>
+        <div class="live-sub">Live library usage</div>
+        <strong class="live-number">${totalMarked}</strong>
+        <span class="live-label">Students marked today</span>
+        <div class="mini-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </article>
     </section>
 
-    <section class="grid cols-2 dashboard-stats">
-      <div class="dashboard-card mini-stat">
-        <div class="mini-value">${d.present}</div>
-        <div class="mini-label">Present marked today</div>
-        <div class="mini-icon teal">●●</div>
-      </div>
-      <div class="dashboard-card mini-stat">
-        <div class="mini-value">${d.absent}</div>
-        <div class="mini-label">Absent marked today</div>
-        <div class="mini-icon orange">●</div>
-      </div>
+    <section class="dashboard-bento action-bento">
+      <button class="dashboard-action action-orange" onclick="navigate('students')">
+        <span class="action-icon">${iconSvg('users')}</span>
+        <strong>Students</strong><small>View and manage<br>student data</small><span class="action-arrow">${iconSvg('arrow')}</span>
+      </button>
+      <button class="dashboard-action action-green" onclick="navigate('timetable')">
+        <span class="action-icon">${iconSvg('calendar')}</span>
+        <strong>Schedule</strong><small>Manage library<br>sessions</small><span class="action-arrow">${iconSvg('arrow')}</span>
+      </button>
+      <button class="dashboard-action action-orange" onclick="navigate('reports')">
+        <span class="action-icon">${iconSvg('chart')}</span>
+        <strong>Reports</strong><small>View insights<br>and analytics</small><span class="action-arrow">${iconSvg('arrow')}</span>
+      </button>
     </section>
 
-    <section class="dashboard-card feature teal-feature">
-      <div class="dash-card-head">
-        <div>
-          <h2>Attendance</h2>
-          <p>${d.present + d.absent} students marked today</p>
+    <section class="dashboard-bento bottom-bento">
+      <article class="dashboard-card attendance-card">
+        <div class="dash-card-head">
+          <div class="heading-with-icon"><span class="section-icon orange-icon">${iconSvg('check')}</span><div><h2>Attendance</h2><p>${totalMarked} students marked today</p></div></div>
+          <span class="pill present"><span class="status-dot"></span>Updated</span>
         </div>
-        <span class="pill light">Updated</span>
-      </div>
-      <button class="feature-button" onclick="navigate('attendance')">Mark / Edit Attendance <span>→</span></button>
-    </section>
-
-    <section class="dashboard-card feature reading-feature">
-      <div class="dash-card-head">
-        <div>
-          <h2>Reading Tracking</h2>
-          <p>Current cycle: Week ${esc(d.cycle)} · Four observations per month</p>
+        <div class="attendance-split">
+          <div><strong>${d.present || 0}</strong><span>Present</span></div>
+          <div><strong>${d.absent || 0}</strong><span>Absent</span></div>
         </div>
-        <span class="pill">0 records</span>
-      </div>
-      <button class="feature-button orange-button" onclick="navigate('assess')">Continue Reading Tracking <span>→</span></button>
-    </section>
-
-    <section class="dashboard-actions">
-      <button class="dashboard-action action-purple" onclick="navigate('students')">
-        <span class="action-icon">▤</span>
-        <strong>Students</strong>
-        <small>View and manage<br>student data</small>
-        <span class="action-arrow">→</span>
-      </button>
-      <button class="dashboard-action action-peach" onclick="navigate('timetable')">
-        <span class="action-icon">▣</span>
-        <strong>Schedule</strong>
-        <small>Manage library<br>sessions</small>
-        <span class="action-arrow">→</span>
-      </button>
-      <button class="dashboard-action action-mint" onclick="navigate('reports')">
-        <span class="action-icon">▤</span>
-        <strong>Reports</strong>
-        <small>View insights<br>and analytics</small>
-        <span class="action-arrow">→</span>
-      </button>
+        <button class="feature-button orange-button" onclick="navigate('attendance')">Mark / Edit Attendance <span>${iconSvg('arrow')}</span></button>
+      </article>
+      <article class="dashboard-card reading-card">
+        <div class="dash-card-head">
+          <div class="heading-with-icon"><span class="section-icon green-icon">${iconSvg('book')}</span><div><h2>Reading Tracking</h2><p>Current cycle: Week ${esc(d.cycle)}</p></div></div>
+          <span class="pill">0 records</span>
+        </div>
+        <div class="reading-preview">
+          <div class="reading-ring">${iconSvg('book')}</div>
+          <div><strong>Four observations per month</strong><span>Track Fluency, Accuracy, Vocabulary and more.</span></div>
+        </div>
+        <button class="feature-button" onclick="navigate('assess')">Continue Reading Tracking <span>${iconSvg('arrow')}</span></button>
+      </article>
     </section>`;
 }
 
@@ -549,10 +585,10 @@ async function viewStudents(content) {
     <div class="section-title">Quick student actions</div>
     <div class="action-grid">
       <button class="action-card" onclick="navigate('add-student')">
-        <span class="action-icon">＋</span><span class="action-title">Add student</span><span class="action-meta">Create a new record</span>
+        <span class="action-icon">${iconSvg('users')}</span><span class="action-title">Add student</span><span class="action-meta">Create a new record</span>
       </button>
       <button class="action-card green" onclick="document.getElementById('stuSearch').focus()">
-        <span class="action-icon">⌕</span><span class="action-title">Find student</span><span class="action-meta">Search the directory</span>
+        <span class="action-icon">${iconSvg('users')}</span><span class="action-title">Find student</span><span class="action-meta">Search the directory</span>
       </button>
     </div>
 
