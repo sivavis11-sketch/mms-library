@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mms-library-v4';
+const CACHE_NAME = 'mms-library-v5';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -26,21 +26,15 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-
-  // Only manage same-origin app-shell requests. Leave the Apps Script API
-  // (a different origin) alone — always go to the network for live data.
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(event.request).then((response) => {
+      if (response && response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
