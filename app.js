@@ -608,203 +608,64 @@ async function viewStudents(content){
 
 /* ---------------- STUDENT PROFILE ---------------- */
 async function viewProfile(content, admissionNumber) {
-  const p = await apiGet('studentProfile', { admissionNumber });
-  const s = p.student;
-  content.innerHTML = `
-    <div class="link-back" onclick="navigate('students')">← Back to students</div>
-    <div class="page-head">
-      <div class="eyebrow">Student profile</div>
-      <h1>${esc(s.studentName)}</h1>
-      <p>Grade ${esc(s.grade)} · Section ${esc(s.section)} · Admission No. ${esc(s.admissionNumber)}</p>
-    </div>
-
-    <div class="form-actions">
-      <button class="btn" onclick="navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">✎ Edit data</button>
-      <button class="btn green" onclick="navigate('move-student',{id:'${esc(s.admissionNumber)}'})">⇄ Move section</button>
-    </div>
-
-    <div class="section-title">Student overview</div>
-    <div class="grid cols-2">
-      <div class="stat dark"><div class="label">Attendance</div><div class="value">${p.attendancePct}%</div></div>
-      <div class="stat"><div class="label">Sessions logged</div><div class="value">${p.attendanceCount}</div></div>
-    </div>
-
-    <div class="section-title">Reading assessments</div>
-    <div class="card">
-      ${p.assessments.length ? p.assessments.slice().reverse().map(a => `
-        <div style="padding:.9rem 0;border-bottom:1px solid var(--line)">
-          <div class="list-row" style="border:none;padding:0 0 .6rem">
-            <div class="main"><div class="title">Cycle ${esc(a.cycle)} · ${esc(a.date)}</div></div>
-            <span class="pill amber">${a.overall}% overall</span>
-          </div>
-          ${RUBRIC_KEYS.map(k => `
-            <div class="bar-row">
-              <div class="lbl">${RUBRIC_LABELS[k]}</div>
-              <div class="bar-track"><div class="bar-fill" style="width:${(a[k]||0)/5*100}%"></div></div>
-              <div class="pct">${a[k]||0}/5</div>
-            </div>`).join('')}
-          ${a.observation ? `<p style="font-size:.75rem;color:var(--muted);margin:.5rem 0 0">${esc(a.observation)}</p>` : ''}
-        </div>`).join('') : '<div class="empty">No assessments recorded yet.</div>'}
-    </div>`;
+  const p=await apiGet('studentProfile',{admissionNumber}); const s=p.student;
+  content.innerHTML=`
+    <div class="link-back" onclick="navigate('students')">← Students</div>
+    <section class="profile-hero">
+      <div class="profile-avatar">${esc(initials(s.studentName))}</div>
+      <div class="profile-identity"><div class="eyebrow">Student profile</div><h1>${esc(s.studentName)}</h1><p>Grade ${esc(s.grade)} · Section ${esc(s.section)} · Admission No. ${esc(s.admissionNumber)}</p></div>
+      <div class="profile-actions"><button class="btn" onclick="navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">${iconSvg('document')} Edit</button><button class="btn green" onclick="navigate('move-student',{id:'${esc(s.admissionNumber)}'})">${iconSvg('arrow')} Move</button></div>
+    </section>
+    <section class="profile-kpis">
+      <article class="profile-stat orange"><span>${iconSvg('check')}</span><div><small>Attendance</small><strong>${p.attendancePct}%</strong><em>Current record</em></div></article>
+      <article class="profile-stat teal"><span>${iconSvg('calendar')}</span><div><small>Sessions logged</small><strong>${p.attendanceCount}</strong><em>Library visits</em></div></article>
+      <article class="profile-stat orange"><span>${iconSvg('book')}</span><div><small>Reading assessments</small><strong>${p.assessments.length}</strong><em>Recorded cycles</em></div></article>
+    </section>
+    <section class="profile-grid">
+      <article class="dashboard-card profile-rubric-card"><div class="dash-card-head"><div><div class="eyebrow">Reading history</div><h2>Assessment timeline</h2></div><button class="btn small" onclick="navigate('assess')">${iconSvg('book')} New assessment</button></div>
+      ${p.assessments.length?p.assessments.slice().reverse().map(a=>`
+        <div class="assessment-card"><div class="assessment-head"><div><strong>Cycle ${esc(a.cycle)}</strong><span>${esc(a.date)}</span></div><span class="pill amber">${a.overall}% overall</span></div>
+        <div class="rubric-grid">${RUBRIC_KEYS.map(k=>`<div><span>${RUBRIC_LABELS[k]}</span><div class="rubric-track"><i style="width:${(a[k]||0)/5*100}%"></i></div><strong>${a[k]||0}/5</strong></div>`).join('')}</div>
+        ${a.observation?`<p class="assessment-note">${esc(a.observation)}</p>`:''}</div>`).join(''):'<div class="empty">No assessments recorded yet.</div>'}</article>
+      <aside class="dashboard-card profile-side-card"><div class="section-icon green-icon">${iconSvg('users')}</div><h2>Student information</h2><div class="info-line"><span>Grade</span><strong>${esc(s.grade)}</strong></div><div class="info-line"><span>Section</span><strong>${esc(s.section)}</strong></div><div class="info-line"><span>Admission</span><strong>${esc(s.admissionNumber)}</strong></div><div class="info-line"><span>Attendance</span><strong>${p.attendancePct}%</strong></div></aside>
+    </section>`;
 }
 
 /* ---------------- ADD / EDIT STUDENT ---------------- */
 async function viewStudentForm(content, mode, admissionNumber) {
-  let existing = null;
-
-  if (mode === 'edit') {
-    const p = await apiGet('studentProfile', { admissionNumber });
-    existing = p.student;
-  }
-
-  const title = mode === 'edit' ? 'Edit student' : 'Add student';
-  const eyebrow = mode === 'edit' ? 'Student management' : 'New record';
-
-  content.innerHTML = `
-    <div class="link-back" onclick="${mode === 'edit' ? `navigate('profile',{id:'${esc(admissionNumber)}'})` : `navigate('students')`}">← Back</div>
-    <div class="page-head">
-      <div class="eyebrow">${eyebrow}</div>
-      <h1>${title}</h1>
-      <p>${mode === 'edit' ? 'Update the student record while preserving the admission number as the permanent key.' : 'Create a student record before the student starts library attendance or reading assessment.'}</p>
-    </div>
-
-    <div class="notice">
-      <strong>${mode === 'edit' ? 'Key field:' : 'Before saving:'}</strong>
-      <span>${mode === 'edit' ? 'Admission number is locked because attendance and reading history are linked to it.' : 'Check the admission number carefully. It should be unique and stable.'}</span>
-    </div>
-
-    <div class="card">
-      <div class="field">
-        <label>Student name</label>
-        <input id="stuNameForm" type="text" value="${esc(existing ? existing.studentName : '')}" placeholder="Full student name">
-      </div>
-      <div class="field">
-        <label>Admission number</label>
-        <input id="stuAdmForm" type="text" value="${esc(existing ? existing.admissionNumber : '')}" placeholder="Admission number" ${mode === 'edit' ? 'readonly' : ''}>
-      </div>
-      <div class="row-2">
-        <div class="field"><label>Grade</label><select id="stuGradeForm"><option value="">Select grade</option>${GRADES.map(g=>`<option value="${g}" ${existing && String(existing.grade)===String(g)?'selected':''}>Grade ${g}</option>`).join('')}</select></div>
-        <div class="field"><label>Section</label><select id="stuSectionForm"><option value="">Select grade first</option></select></div>
-      </div>
-      <div class="form-actions">
-        <button class="btn ghost" onclick="${mode === 'edit' ? `navigate('profile',{id:'${esc(admissionNumber)}'})` : `navigate('students')`}">Cancel</button>
-        <button class="btn" id="studentSaveBtn">${mode === 'edit' ? 'Save changes' : 'Add student'}</button>
-      </div>
-    </div>`;
-
-  const nameInput = document.getElementById('stuNameForm');
-  const admInput = document.getElementById('stuAdmForm');
-  const gradeSel = document.getElementById('stuGradeForm');
-  const sectionSel = document.getElementById('stuSectionForm');
-  const saveBtn = document.getElementById('studentSaveBtn');
-
-  async function loadFormSections(selected) {
-    sectionSel.innerHTML = '<option value="">Select section</option>';
-    if (!gradeSel.value) return;
-    await loadSectionsInto(sectionSel, gradeSel.value, selected);
-  }
-
-  gradeSel.addEventListener('change', () => loadFormSections(''));
-  await loadFormSections(existing ? existing.section : '');
-
-  saveBtn.addEventListener('click', async () => {
-    const studentName = nameInput.value.trim();
-    const admission = admInput.value.trim();
-    const grade = gradeSel.value;
-    const section = sectionSel.value.trim();
-
-    if (!studentName || !admission || !grade || !section) {
-      toast('Please complete name, admission number, grade and section.');
-      return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = mode === 'edit' ? 'Saving…' : 'Adding…';
-
-    try {
-      if (mode === 'edit') {
-        await apiPost('updateStudent', { admissionNumber: admission, studentName, grade, section });
-        invalidateStudentCaches();
-        toast('Student data updated.');
-        setTimeout(() => navigate('profile', { id: admission }), 350);
-      } else {
-        await apiPost('addStudent', { admissionNumber: admission, studentName, grade, section });
-        invalidateStudentCaches();
-        toast('Student added.');
-        setTimeout(() => navigate('students'), 350);
-      }
-    } catch (err) {
-      toast('Could not save: ' + err.message);
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = mode === 'edit' ? 'Save changes' : 'Add student';
-    }
-  });
+  let existing=null;if(mode==='edit'){const p=await apiGet('studentProfile',{admissionNumber});existing=p.student;}
+  const edit=mode==='edit';
+  content.innerHTML=`
+    <div class="link-back" onclick="${edit?`navigate('profile',{id:'${esc(admissionNumber)}'})`:`navigate('students')`}">← Back</div>
+    <section class="screen-hero form-hero"><div><div class="eyebrow">${edit?'Student management':'New record'}</div><h1>${edit?'Edit student':'Add student'}</h1><p>${edit?'Update student information without changing the permanent admission key.':'Create a student record for library attendance and reading tracking.'}</p></div><div class="form-hero-icon">${iconSvg('users')}</div></section>
+    <section class="form-bento">
+      <article class="dashboard-card form-main"><div class="dash-card-head"><div><div class="eyebrow">Student details</div><h2>${edit?'Update record':'Create record'}</h2></div><span class="pill">${edit?'EDIT':'NEW'}</span></div>
+        <div class="form-grid"><div class="field wide"><label>Student name</label><input id="stuNameForm" type="text" value="${esc(existing?existing.studentName:'')}" placeholder="Full student name"></div>
+        <div class="field"><label>Admission number</label><input id="stuAdmForm" type="text" value="${esc(existing?existing.admissionNumber:'')}" placeholder="Admission number" ${edit?'readonly':''}></div>
+        <div class="field"><label>Grade</label><select id="stuGradeForm"><option value="">Select grade</option>${GRADES.map(g=>`<option value="${g}" ${existing&&String(existing.grade)===String(g)?'selected':''}>Grade ${g}</option>`).join('')}</select></div>
+        <div class="field"><label>Section</label><select id="stuSectionForm"><option value="">Select grade first</option></select></div></div>
+        <div class="form-actions"><button class="btn ghost" onclick="${edit?`navigate('profile',{id:'${esc(admissionNumber)}'})`:`navigate('students')`}">Cancel</button><button class="btn" id="studentSaveBtn">${edit?'Save changes':'Add student'} ${iconSvg('arrow')}</button></div>
+      </article>
+      <aside class="dashboard-card form-side"><div class="section-icon orange-icon">${iconSvg('check')}</div><h3>${edit?'Permanent key':'Before saving'}</h3><p>${edit?'The admission number remains locked because attendance and reading history are connected to it.':'Make sure the admission number is unique and stable before creating the record.'}</p><div class="form-tip"><span>${iconSvg('document')}</span><strong>Library record</strong><small>Attendance and reading history stay connected.</small></div></aside>
+    </section>`;
+  const nameInput=document.getElementById('stuNameForm'),admInput=document.getElementById('stuAdmForm'),gradeSel=document.getElementById('stuGradeForm'),sectionSel=document.getElementById('stuSectionForm'),saveBtn=document.getElementById('studentSaveBtn');
+  async function loadFormSections(selected){sectionSel.innerHTML='<option value="">Select section</option>';if(!gradeSel.value)return;await loadSectionsInto(sectionSel,gradeSel.value,selected)}
+  gradeSel.addEventListener('change',()=>loadFormSections(''));await loadFormSections(existing?existing.section:'');
+  saveBtn.addEventListener('click',async()=>{const studentName=nameInput.value.trim(),admission=admInput.value.trim(),grade=gradeSel.value,section=sectionSel.value.trim();if(!studentName||!admission||!grade||!section){toast('Please complete name, admission number, grade and section.');return}saveBtn.disabled=true;saveBtn.textContent=edit?'Saving…':'Adding…';try{if(edit){await apiPost('updateStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student data updated.');setTimeout(()=>navigate('profile',{id:admission}),350)}else{await apiPost('addStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student added.');setTimeout(()=>navigate('students'),350)}}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.textContent=edit?'Save changes':'Add student'}});
 }
 
 /* ---------------- MOVE STUDENT ---------------- */
 async function viewMoveStudent(content, admissionNumber) {
-  const p = await apiGet('studentProfile', { admissionNumber });
-  const s = p.student;
-
-  content.innerHTML = `
+  const p=await apiGet('studentProfile',{admissionNumber}),s=p.student;
+  content.innerHTML=`
     <div class="link-back" onclick="navigate('profile',{id:'${esc(admissionNumber)}'})">← Back to profile</div>
-    <div class="page-head">
-      <div class="eyebrow">Section management</div>
-      <h1>Move student</h1>
-      <p>Move ${esc(s.studentName)} to another section in Grade ${esc(s.grade)}. Attendance and reading history remain linked to the student.</p>
-    </div>
-
-    <div class="card">
-      <div class="student-row" style="margin-bottom:1rem">
-        <div class="avatar">${esc(initials(s.studentName))}</div>
-        <div class="main">
-          <div class="title">${esc(s.studentName)}</div>
-          <div class="meta">Grade ${esc(s.grade)} · Current section ${esc(s.section)} · Adm# ${esc(s.admissionNumber)}</div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Move to existing section</label>
-        <select id="moveSection"><option value="">Select section</option></select>
-      </div>
-
-      <div class="field">
-        <label>Or enter a new section</label>
-        <input id="moveNewSection" type="text" placeholder="Example: B">
-      </div>
-
-      <div class="form-actions">
-        <button class="btn ghost" onclick="navigate('profile',{id:'${esc(admissionNumber)}'})">Cancel</button>
-        <button class="btn" id="moveSave">Move to section</button>
-      </div>
-    </div>`;
-
-  const select = document.getElementById('moveSection');
-  const newSection = document.getElementById('moveNewSection');
-  const save = document.getElementById('moveSave');
-  await loadSectionsInto(select, s.grade, '');
-
-  save.addEventListener('click', async () => {
-    const target = newSection.value.trim() || select.value.trim();
-    if (!target) { toast('Select or enter the destination section.'); return; }
-    if (target === String(s.section)) { toast('Choose a different section.'); return; }
-
-    save.disabled = true;
-    save.textContent = 'Moving…';
-
-    try {
-      await apiPost('moveStudent', { admissionNumber: s.admissionNumber, grade: s.grade, section: target });
-      invalidateStudentCaches();
-      toast('Student moved to Section ' + target + '.');
-      setTimeout(() => navigate('profile', { id: s.admissionNumber }), 350);
-    } catch (err) {
-      toast('Could not move student: ' + err.message);
-    } finally {
-      save.disabled = false;
-      save.textContent = 'Move to section';
-    }
-  });
+    <section class="screen-hero move-hero"><div><div class="eyebrow">Section management</div><h1>Move student</h1><p>Move this student to another section while preserving attendance and reading history.</p></div><div class="move-orb">${iconSvg('arrow')}</div></section>
+    <section class="move-bento">
+      <article class="dashboard-card current-student-card"><div class="avatar large">${esc(initials(s.studentName))}</div><div class="eyebrow">Current record</div><h2>${esc(s.studentName)}</h2><p>Admission ${esc(s.admissionNumber)}</p><div class="current-class"><span>Grade</span><strong>${esc(s.grade)}</strong><span>Section</span><strong>${esc(s.section)}</strong></div></article>
+      <article class="dashboard-card move-form-card"><div class="section-icon green-icon">${iconSvg('arrow')}</div><div class="eyebrow">Destination</div><h2>Choose new section</h2><p>Keep the same student record and move only the section.</p><div class="field"><label>Existing section</label><select id="moveSection"><option value="">Select section</option></select></div><div class="field"><label>Or enter new section</label><input id="moveNewSection" type="text" placeholder="Example: B"></div><div class="form-actions"><button class="btn ghost" onclick="navigate('profile',{id:'${esc(admissionNumber)}'})">Cancel</button><button class="btn green" id="moveSave">Move to section ${iconSvg('arrow')}</button></div></article>
+    </section>`;
+  const select=document.getElementById('moveSection'),newSection=document.getElementById('moveNewSection'),save=document.getElementById('moveSave');await loadSectionsInto(select,s.grade,'');
+  save.addEventListener('click',async()=>{const target=newSection.value.trim()||select.value.trim();if(!target){toast('Select or enter the destination section.');return}if(target===String(s.section)){toast('Choose a different section.');return}save.disabled=true;save.textContent='Moving…';try{await apiPost('moveStudent',{admissionNumber:s.admissionNumber,grade:s.grade,section:target});invalidateStudentCaches();toast('Student moved to Section '+target+'.');setTimeout(()=>navigate('profile',{id:s.admissionNumber}),350)}catch(err){toast('Could not move student: '+err.message)}finally{save.disabled=false;save.textContent='Move to section'}});
 }
 
 /* ---------------- ATTENDANCE ---------------- */
@@ -832,84 +693,23 @@ async function viewAttendance(content){
 
 /* ---------------- READING ASSESSMENT ---------------- */
 async function viewAssess(content) {
-  content.innerHTML = `
-    <div class="page-head">
-      <div class="eyebrow">Reading rubric</div>
-      <h1>Reading Assessment</h1>
-    </div>
-    <div class="row-3">
-      <div class="field"><label>Date</label><input id="asDate" type="date" value="${todayStr()}"></div>
-      <div class="field"><label>Grade</label><select id="asGrade"><option value="">Select</option>${GRADES.map(g=>`<option value="${g}">Grade ${g}</option>`).join('')}</select></div>
-      <div class="field"><label>Section</label><select id="asSection"><option value="">Select</option></select></div>
-    </div>
-    <div class="field"><label>Student</label><select id="asStudent"><option value="">Select grade & section first</option></select></div>
-    <div class="card" id="asForm" style="display:none">
-      ${RUBRIC_KEYS.map(k => `
-        <div class="rubric">
-          <div class="rlabel"><span>${RUBRIC_LABELS[k]}</span><span class="score" id="asScore_${k}">3/5</span></div>
-          <div class="dots" id="asDots_${k}">${[1,2,3,4,5].map(n=>`<button data-k="${k}" data-n="${n}">${n}</button>`).join('')}</div>
-        </div>`).join('')}
-      <div class="field"><label>Observation (optional)</label><textarea id="asObs" placeholder="Notes on this student's reading session…"></textarea></div>
-      <button class="btn block" id="asSave">Save Assessment</button>
-    </div>`;
-
-  const gradeSel = document.getElementById('asGrade');
-  const sectionSel = document.getElementById('asSection');
-  const studentSel = document.getElementById('asStudent');
-  const form = document.getElementById('asForm');
-  const scores = {}; RUBRIC_KEYS.forEach(k => scores[k] = 3);
-
-  function paintDots(k) {
-    document.querySelectorAll(`#asDots_${k} button`).forEach(b => b.classList.toggle('on', Number(b.dataset.n) <= scores[k]));
-    document.getElementById(`asScore_${k}`).textContent = scores[k] + '/5';
-  }
-  RUBRIC_KEYS.forEach(paintDots);
-  document.querySelectorAll('.dots button').forEach(b => {
-    b.addEventListener('click', () => { scores[b.dataset.k] = Number(b.dataset.n); paintDots(b.dataset.k); });
-  });
-
-  async function refreshSections() {
-    sectionSel.innerHTML = '<option value="">Select</option>';
-    studentSel.innerHTML = '<option value="">Select grade & section first</option>';
-    form.style.display = 'none';
-    if (!gradeSel.value) return;
-    const sections = await apiGet('sections', { grade: gradeSel.value });
-    sections.forEach(s => sectionSel.insertAdjacentHTML('beforeend', `<option value="${esc(s)}">Section ${esc(s)}</option>`));
-  }
-
-  async function refreshStudents() {
-    studentSel.innerHTML = '<option value="">Select</option>';
-    form.style.display = 'none';
-    if (!gradeSel.value || !sectionSel.value) return;
-    const students = await apiGet('students', { grade: gradeSel.value, section: sectionSel.value });
-    students.forEach(s => studentSel.insertAdjacentHTML('beforeend', `<option value="${esc(s.admissionNumber)}" data-name="${esc(s.studentName)}">${esc(s.studentName)}</option>`));
-  }
-
-  studentSel.addEventListener('change', () => { form.style.display = studentSel.value ? 'block' : 'none'; });
-  gradeSel.addEventListener('change', refreshSections);
-  sectionSel.addEventListener('change', refreshStudents);
-
-  document.getElementById('asSave').addEventListener('click', async (e) => {
-    const btn = e.target; btn.disabled = true; btn.textContent = 'Saving…';
-    try {
-      const opt = studentSel.selectedOptions[0];
-      await apiPost('saveReadingAssessment', {
-        date: document.getElementById('asDate').value,
-        admissionNumber: studentSel.value,
-        studentName: opt.dataset.name,
-        grade: gradeSel.value,
-        section: sectionSel.value,
-        observation: document.getElementById('asObs').value,
-        ...scores
-      });
-      toast('Assessment saved.');
-      document.getElementById('asObs').value = '';
-    } catch (err) {
-      toast('Could not save: ' + err.message);
-    } finally {
-      btn.disabled = false; btn.textContent = 'Save Assessment';
-    }
-  });
+  content.innerHTML=`
+    <section class="screen-hero assess-hero"><div><div class="eyebrow">Reading rubric</div><h1>Reading Assessment</h1><p>Capture the six reading dimensions with a simple visual scorecard.</p></div><div class="assess-orb">${iconSvg('book')}</div></section>
+    <section class="assess-bento">
+      <article class="dashboard-card assess-context"><div class="section-icon green-icon">${iconSvg('book')}</div><div class="eyebrow">Session setup</div><h2>Choose student</h2><div class="field"><label>Date</label><input id="asDate" type="date" value="${todayStr()}"></div><div class="field"><label>Grade</label><select id="asGrade"><option value="">Select</option>${GRADES.map(g=>`<option value="${g}">Grade ${g}</option>`).join('')}</select></div><div class="field"><label>Section</label><select id="asSection"><option value="">Select</option></select></div><div class="field"><label>Student</label><select id="asStudent"><option value="">Select grade & section first</option></select></div></article>
+      <article class="dashboard-card rubric-card" id="asForm" style="display:none"><div class="dash-card-head"><div><div class="eyebrow">Six dimensions</div><h2>Reading scorecard</h2></div><span class="pill amber">1–5 scale</span></div>
+        <div class="rubric-bento">${RUBRIC_KEYS.map(k=>`<div class="rubric-tile"><div><strong>${RUBRIC_LABELS[k]}</strong><span class="score" id="asScore_${k}">3/5</span></div><div class="dots" id="asDots_${k}">${[1,2,3,4,5].map(n=>`<button data-k="${k}" data-n="${n}">${n}</button>`).join('')}</div></div>`).join('')}</div>
+        <div class="field"><label>Observation</label><textarea id="asObs" placeholder="Notes on this student's reading session…"></textarea></div><button class="btn block" id="asSave">Save Assessment ${iconSvg('check')}</button>
+      </article>
+      <aside class="dashboard-card assess-scale"><div class="section-icon orange-icon">${iconSvg('chart')}</div><h3>Scoring guide</h3><div class="scale-line"><strong>1</strong><span>Rarely</span></div><div class="scale-line"><strong>2</strong><span>Sometimes</span></div><div class="scale-line"><strong>3</strong><span>Often</span></div><div class="scale-line"><strong>4</strong><span>Consistent</span></div><div class="scale-line"><strong>5</strong><span>Highly consistent</span></div></aside>
+    </section>`;
+  const gradeSel=document.getElementById('asGrade'),sectionSel=document.getElementById('asSection'),studentSel=document.getElementById('asStudent'),formEl=document.getElementById('asForm'),scores={};RUBRIC_KEYS.forEach(k=>scores[k]=3);
+  function paintDots(k){document.querySelectorAll(`#asDots_${k} button`).forEach(b=>b.classList.toggle('on',Number(b.dataset.n)<=scores[k]));document.getElementById(`asScore_${k}`).textContent=scores[k]+'/5'}
+  RUBRIC_KEYS.forEach(paintDots);document.querySelectorAll('.dots button').forEach(b=>b.addEventListener('click',()=>{scores[b.dataset.k]=Number(b.dataset.n);paintDots(b.dataset.k)}));
+  async function refreshSections(){sectionSel.innerHTML='<option value="">Select</option>';studentSel.innerHTML='<option value="">Select grade & section first</option>';formEl.style.display='none';if(!gradeSel.value)return;const sections=await apiGet('sections',{grade:gradeSel.value});sections.forEach(s=>sectionSel.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">Section ${esc(s)}</option>`))}
+  async function refreshStudents(){studentSel.innerHTML='<option value="">Select</option>';formEl.style.display='none';if(!gradeSel.value||!sectionSel.value)return;const students=await apiGet('students',{grade:gradeSel.value,section:sectionSel.value});students.forEach(s=>studentSel.insertAdjacentHTML('beforeend',`<option value="${esc(s.admissionNumber)}" data-name="${esc(s.studentName)}">${esc(s.studentName)}</option>`))}
+  studentSel.addEventListener('change',()=>{formEl.style.display=studentSel.value?'block':'none'});gradeSel.addEventListener('change',refreshSections);sectionSel.addEventListener('change',refreshStudents);
+  document.getElementById('asSave').addEventListener('click',async e=>{const btn=e.target;btn.disabled=true;btn.textContent='Saving…';try{const opt=studentSel.selectedOptions[0];await apiPost('saveReadingAssessment',{date:document.getElementById('asDate').value,admissionNumber:studentSel.value,studentName:opt.dataset.name,grade:gradeSel.value,section:sectionSel.value,observation:document.getElementById('asObs').value,...scores});toast('Assessment saved.');document.getElementById('asObs').value=''}catch(err){toast('Could not save: '+err.message)}finally{btn.disabled=false;btn.textContent='Save Assessment'}});
 }
 
 /* ---------------- REPORTS ---------------- */
