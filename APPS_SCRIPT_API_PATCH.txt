@@ -11,12 +11,69 @@ IMPORTANT:
 PASTE THIS:
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.api === '1') {
+  const p = e && e.parameter ? e.parameter : {};
+
+  // Cross-origin PWA bridge. The bridge itself is hosted by Apps Script,
+  // so it can safely use google.script.run without relying on JSONP redirects.
+  if (p.bridge === '1') {
+    return createPwaBridge_();
+  }
+
+  if (p.api === '1') {
     return handleApiGet_(e);
   }
 
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle(APP.NAME)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+}
+
+function createPwaBridge_() {
+  const html = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body><script>
+(function () {
+  var SOURCE = 'mms-library-bridge';
+
+  function reply(event, message) {
+    var target = event && event.origin ? event.origin : '*';
+    try { event.source.postMessage(message, target); } catch (err) {}
+  }
+
+  window.addEventListener('message', function (event) {
+    var data = event && event.data;
+    if (!data || data.source !== SOURCE || !data.token) return;
+
+    var action = String(data.action || '');
+    var params = data.params || {};
+    var token = String(data.token);
+
+    if (!action) {
+      reply(event, {source:SOURCE, token:token, ok:false, error:'Missing API action'});
+      return;
+    }
+
+    try {
+      google.script.run
+        .withSuccessHandler(function (result) {
+          reply(event, {source:SOURCE, token:token, ok:true, data:result});
+        })
+        .withFailureHandler(function (err) {
+          reply(event, {source:SOURCE, token:token, ok:false, error:String(err && err.message || err || 'Apps Script request failed')});
+        })
+        .libraryApiGet(action, params);
+    } catch (err) {
+      reply(event, {source:SOURCE, token:token, ok:false, error:String(err && err.message || err)});
+    }
+  });
+
+  window.parent.postMessage({source:SOURCE, ready:true}, '*');
+})();
+</script></body></html>`;
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('MMS Library API Bridge')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
