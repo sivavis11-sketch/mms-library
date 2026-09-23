@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>MMS Library</title>
-<meta name="theme-color" content="#EFD7E5">
+<meta name="theme-color" content="#FF7426">
 <meta name="description" content="Library attendance and reading assessment tracking for Mathakondapalli Model School.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,8 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
+<style>:root{
   --bg-start:#F7D8CB;
   --bg-mid:#F0D9E8;
   --bg-end:#D9C9EE;
@@ -330,8 +329,89 @@ a{color:inherit;text-decoration:none}
 @media(max-width:620px){.dashboard-actions{grid-template-columns:repeat(3,minmax(0,1fr))}.dashboard-action{min-height:122px;padding:.7rem}.dashboard-action strong{font-size:.7rem}}
 @media(max-width:480px){.library-welcome{align-items:flex-start}.library-welcome h1{font-size:1.28rem}.welcome-person{gap:.4rem}.welcome-avatar{width:36px;height:36px}.welcome-small{font-size:.58rem}.welcome-name{font-size:.85rem}.welcome-date{font-size:.52rem}.today-session{grid-template-columns:52px 36px 1fr auto;gap:.5rem}.session-icon{width:36px;height:36px}.today-session .btn{padding:.58rem .72rem}.dashboard-actions{gap:.45rem}.dashboard-action{min-height:112px}.dashboard-action .action-icon{width:32px;height:32px}.dashboard-action small{font-size:.54rem}}
 
-.apps-script-mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#13B8AE,#25CFC2);color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.04em;box-shadow:var(--shadow-soft)}
-@media(max-width:860px){.apps-script-mark{width:34px;height:34px;border-radius:11px}}
+
+/* ===== MMS LIBRARY PREMIUM ORANGE + GREEN BENTO SYSTEM ===== */
+:root{
+  --orange:#FF7426;
+  --orange-deep:#E95A12;
+  --orange-soft:#FFE7D8;
+  --green:#13B8AE;
+  --green-2:#07958E;
+  --green-soft:#D8F2EF;
+}
+svg{width:20px;height:20px;display:block}
+.library-welcome.premium-hero{
+  min-height:170px;padding:1.45rem 1.55rem;border-radius:30px;margin-bottom:1rem;
+  background:linear-gradient(110deg,#FFF0E7 0%,rgba(255,255,255,.82) 45%,rgba(239,224,239,.75) 100%);
+  border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow-out);position:relative;overflow:hidden;
+}
+.library-welcome.premium-hero:after{
+  content:"";position:absolute;right:-70px;top:-110px;width:410px;height:300px;
+  background:linear-gradient(135deg,rgba(255,116,38,.22),rgba(255,255,255,0));
+  border-radius:45% 0 45% 55%;pointer-events:none;
+}
+.welcome-copy,.welcome-person{position:relative;z-index:1}
+.welcome-copy h1{font-family:var(--font-display);font-size:2rem;line-height:1.02;letter-spacing:-.055em;margin:.35rem 0;color:var(--text)}
+.hero-tagline{margin:.55rem 0 0;color:var(--orange-deep);font-size:.68rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.welcome-person{
+  min-width:230px;display:flex;align-items:center;gap:.7rem;padding:.7rem 1rem;
+  border-radius:22px;background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.78);
+  box-shadow:var(--shadow-soft);backdrop-filter:blur(15px)
+}
+.icon-orb{display:grid;place-items:center}.icon-orb svg{width:25px;height:25px}
+.kpi-bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem;margin-bottom:.85rem}
+.kpi-card{min-height:126px;display:flex;align-items:center;gap:.75rem;padding:1rem;border-radius:24px}
+.kpi-icon,.section-icon{
+  width:46px;height:46px;flex:none;border-radius:16px;display:grid;place-items:center;
+  box-shadow:var(--shadow-in)
+}
+.kpi-icon svg,.section-icon svg{width:23px;height:23px}
+.kpi-orange .kpi-icon,.orange-icon{background:var(--orange-soft);color:var(--orange-deep)}
+.kpi-green .kpi-icon,.green-icon{background:var(--green-soft);color:var(--green-2)}
+.kpi-copy{min-width:0;display:flex;flex-direction:column;gap:.12rem}
+.kpi-copy span{font-size:.68rem;color:var(--muted);font-weight:700}
+.kpi-copy strong{font-family:var(--font-display);font-size:1.65rem;line-height:1;color:var(--text)}
+.kpi-copy small{font-size:.62rem;color:var(--muted)}
+.kpi-arrow{margin-left:auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--orange-soft);color:var(--orange-deep)}
+.kpi-green .kpi-arrow{background:var(--green-soft);color:var(--green-2)}
+.kpi-arrow svg{width:15px;height:15px}
+.dashboard-bento{display:grid;gap:.85rem}
+.main-bento{grid-template-columns:minmax(0,1.45fr) minmax(280px,.9fr);margin-bottom:.85rem}
+.bento-large{min-height:255px}
+.live-card{
+  min-height:255px;padding:1.25rem;color:#fff;border:0;
+  background:linear-gradient(135deg,#FF7A2D 0%,#F45E17 100%);
+  box-shadow:12px 12px 24px rgba(145,73,20,.20),-7px -7px 16px rgba(255,255,255,.72);
+  border-radius:28px;position:relative;overflow:hidden
+}
+.live-card:after{content:"";position:absolute;right:-50px;bottom:-70px;width:260px;height:220px;border-radius:50%;background:rgba(255,255,255,.10)}
+.live-top{display:flex;justify-content:space-between;align-items:center}.white-icon{background:rgba(255,255,255,.18);color:#fff}.live-badge{background:rgba(255,255,255,.88);color:var(--orange-deep);font-size:.62rem;font-weight:900;padding:.4rem .65rem;border-radius:999px}
+.live-title{font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-top:.9rem}.live-sub{font-size:.7rem;opacity:.8}.live-number{display:block;font-family:var(--font-display);font-size:2.5rem;line-height:1;margin-top:1.1rem}.live-label{font-size:.7rem;opacity:.88}
+.mini-bars{position:absolute;right:1rem;bottom:1rem;display:flex;align-items:flex-end;gap:5px;height:75px;opacity:.34}.mini-bars i{display:block;width:9px;background:#fff;border-radius:8px}.mini-bars i:nth-child(1){height:25px}.mini-bars i:nth-child(2){height:42px}.mini-bars i:nth-child(3){height:58px}.mini-bars i:nth-child(4){height:35px}.mini-bars i:nth-child(5){height:68px}.mini-bars i:nth-child(6){height:46px}.mini-bars i:nth-child(7){height:62px}.mini-bars i:nth-child(8){height:37px}.mini-bars i:nth-child(9){height:70px}.mini-bars i:nth-child(10){height:50px}
+.heading-with-icon{display:flex;align-items:center;gap:.7rem}.heading-with-icon h2{margin:0}.heading-with-icon p{margin:.18rem 0 0}
+.premium-session{margin-top:1.1rem;padding:1rem;border-radius:21px;background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.72);box-shadow:var(--shadow-in)}
+.premium-session .session-icon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;flex:none}.premium-session .session-icon svg{width:24px;height:24px}
+.action-bento{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:.85rem}
+.action-bento .dashboard-action{min-height:145px;border-radius:24px;padding:1.1rem;box-shadow:var(--shadow-out);border:1px solid rgba(255,255,255,.8);position:relative;text-align:left;overflow:hidden}
+.action-orange{background:linear-gradient(135deg,rgba(255,239,229,.95),rgba(255,255,255,.66))}
+.action-green{background:linear-gradient(135deg,rgba(220,246,242,.98),rgba(255,255,255,.66))}
+.action-bento .action-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:16px;background:var(--orange-soft);color:var(--orange-deep);box-shadow:var(--shadow-in)}
+.action-bento .action-green .action-icon{background:var(--green-soft);color:var(--green-2)}
+.action-bento .action-icon svg{width:23px;height:23px}
+.action-bento strong{display:block;margin-top:.9rem;font-family:var(--font-display);font-size:.95rem}.action-bento small{display:block;margin-top:.25rem;color:var(--muted);font-size:.65rem;line-height:1.35}.action-arrow{position:absolute;right:1rem;bottom:1rem;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--orange);color:#fff;box-shadow:var(--shadow-soft)}.action-green .action-arrow{background:var(--green)}
+.action-arrow svg{width:16px;height:16px}
+.bottom-bento{grid-template-columns:1fr 1fr}.attendance-card,.reading-card{min-height:220px}.attendance-split{display:flex;gap:.6rem;margin:1rem 0}.attendance-split div{flex:1;padding:.75rem;border-radius:16px;background:rgba(255,255,255,.46);box-shadow:var(--shadow-in)}.attendance-split strong{display:block;font-family:var(--font-display);font-size:1.35rem;color:var(--orange-deep)}.attendance-split span{font-size:.62rem;color:var(--muted)}
+.reading-preview{display:flex;align-items:center;gap:.75rem;margin:1rem 0}.reading-ring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--green-soft);color:var(--green-2);box-shadow:var(--shadow-in);flex:none}.reading-ring svg{width:25px;height:25px}.reading-preview strong{display:block;font-size:.75rem}.reading-preview span{display:block;margin-top:.18rem;font-size:.64rem;color:var(--muted);line-height:1.35}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green)}
+#content[data-route="timetable"] .card{border-radius:28px}.timetable-bento{}
+#content[data-route="students"] .hero{border-radius:28px}
+#content[data-route="attendance"] .card{border-radius:28px}.#content[data-route="reports"]{}
+#content[data-route="reports"] .card{border-radius:28px}
+#content[data-route="assess"] .card{border-radius:28px}
+#content[data-route="profile"] .card{border-radius:28px}
+@media(max-width:980px){.kpi-bento{grid-template-columns:repeat(2,minmax(0,1fr))}.main-bento{grid-template-columns:1fr}.live-card{min-height:210px}}
+@media(max-width:640px){.library-welcome.premium-hero{padding:1.05rem;min-height:180px}.welcome-copy h1{font-size:1.55rem}.welcome-person{min-width:0;width:100%;margin-top:.9rem}.library-welcome.premium-hero{display:block}.kpi-bento{grid-template-columns:1fr 1fr;gap:.65rem}.kpi-card{min-height:105px;padding:.75rem}.kpi-icon{width:40px;height:40px}.kpi-copy strong{font-size:1.3rem}.kpi-copy small{font-size:.55rem}.kpi-arrow{display:none}.action-bento,.bottom-bento{grid-template-columns:1fr}.action-bento .dashboard-action{min-height:120px}}
+@media(max-width:430px){.kpi-bento{grid-template-columns:1fr}.kpi-card{min-height:94px}.kpi-copy strong{font-size:1.45rem}}
 </style>
 </head>
 <body>
@@ -373,6 +453,26 @@ a{color:inherit;text-decoration:none}
 const API_URL = "https://script.google.com/macros/s/AKfycbyefUrMjn2-Wey23T7Fof0XQ_4g2GBsogSh37AyetEo8Rcc4h-uzK9wV6JKGXGPGv8X/exec";
 </script>
 <script>
+/* MMS Library — app shell, router, and views */
+
+const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
+const RUBRIC_LABELS = {
+  fluency:'Fluency', accuracy:'Accuracy', vocabulary:'Vocabulary',
+  comprehension:'Comprehension', expression:'Expression', confidence:'Confidence'
+};
+const GRADES = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+
+const state = {
+  route: 'dashboard',
+  params: {},
+};
+
+/* ---------------- API client ---------------- */
+/*
+ * MMS Library supports two runtimes:
+ * 1) GitHub/PWA: cross-origin JSONP + form POST to the deployed Apps Script API.
+ * 2) Apps Script HtmlService: use google.script.run directly. This avoids
+ *    the HtmlService sandbox/CSP blocking the JSONP <script>
 /* MMS Library — app shell, router, and views */
 
 const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
@@ -696,6 +796,7 @@ async function render() {
   syncNavActive();
   document.getElementById('topbarDate').textContent = niceDate(todayStr());
   const content = document.getElementById('content');
+  content.dataset.route = state.route;
   if (!apiConfigured() && state.route !== 'dashboard') {
     content.innerHTML = setupBanner();
     return;
@@ -722,6 +823,21 @@ async function render() {
   }
 }
 
+function iconSvg(name) {
+  const paths = {
+    users: '<circle cx="9" cy="8" r="3"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 8.5a3 3 0 0 1 0 5.9M16 14.5c3.1.4 5.2 2.3 5.5 5.5"/>',
+    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v15M8 7h8M8 11h7"/>',
+    calendar: '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v4M16 3v4M8 13h3M13 13h3M8 17h3"/>',
+    document: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h6M9 16h6"/>',
+    chart: '<path d="M4 19V9M12 19V5M20 19v-7"/><path d="M3 19h18"/>',
+    check: '<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="3"/>',
+    activity: '<path d="M3 12h4l2-5 4 10 2-5h6"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    arrow: '<path d="M5 12h13M13 7l5 5-5 5"/>'
+  };
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paths[name] || paths.arrow) + '</svg>';
+}
+
 /* ---------------- DASHBOARD ---------------- */
 async function viewDashboard(content) {
   if (!apiConfigured()) {
@@ -737,16 +853,18 @@ async function viewDashboard(content) {
 
   const d = await apiGet('dashboard', { date: todayStr() });
   const firstClass = d.timetable && d.timetable.length ? d.timetable[0] : null;
+  const totalMarked = Number(d.present || 0) + Number(d.absent || 0);
 
   content.innerHTML = `
-    <section class="library-welcome">
-      <div>
+    <section class="library-welcome premium-hero">
+      <div class="welcome-copy">
         <div class="eyebrow">${esc(String(d.day || '').toUpperCase())} · ${esc(niceDate(todayStr()))}</div>
         <h1>Mathakondapalli<br>Model School</h1>
         <div class="library-wordmark">LIBRARY</div>
+        <p class="hero-tagline">A reader today. A leader tomorrow.</p>
       </div>
       <div class="welcome-person">
-        <div class="welcome-avatar">●</div>
+        <div class="welcome-avatar icon-orb">${iconSvg('sun')}</div>
         <div>
           <div class="welcome-small">Good Morning,</div>
           <div class="welcome-name">Librarian!</div>
@@ -755,81 +873,99 @@ async function viewDashboard(content) {
       </div>
     </section>
 
-    <section class="dashboard-card today-library">
-      <div class="dash-card-head">
-        <div>
-          <h2>Today's Library</h2>
-          <p>Classes scheduled for today</p>
-        </div>
-        <span class="pill amber">${d.timetable.length} classes</span>
-      </div>
-      ${firstClass ? `
-        <div class="today-session">
-          <div class="session-time"><strong>${esc(firstClass.start)}</strong><strong>${esc(firstClass.end)}</strong></div>
-          <div class="session-icon">▣</div>
-          <div class="session-info">
-            <strong>${esc(firstClass.classSection)}</strong>
-            <span>Open attendance for this class</span>
+    <section class="dashboard-bento kpi-bento">
+      <article class="dashboard-card kpi-card kpi-orange">
+        <div class="kpi-icon">${iconSvg('users')}</div>
+        <div class="kpi-copy"><span>Total Students</span><strong>—</strong><small>Student directory</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+      <article class="dashboard-card kpi-card kpi-green">
+        <div class="kpi-icon">${iconSvg('book')}</div>
+        <div class="kpi-copy"><span>Active Readers</span><strong>—</strong><small>Reading tracking</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+      <article class="dashboard-card kpi-card kpi-orange">
+        <div class="kpi-icon">${iconSvg('calendar')}</div>
+        <div class="kpi-copy"><span>Today's Attendance</span><strong>${d.present || 0}</strong><small>of ${totalMarked || 0} students marked</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+      <article class="dashboard-card kpi-card kpi-green">
+        <div class="kpi-icon">${iconSvg('document')}</div>
+        <div class="kpi-copy"><span>Reading Records</span><strong>0</strong><small>Assessment records</small></div>
+        <span class="kpi-arrow">${iconSvg('arrow')}</span>
+      </article>
+    </section>
+
+    <section class="dashboard-bento main-bento">
+      <article class="dashboard-card today-library bento-large">
+        <div class="dash-card-head">
+          <div class="heading-with-icon">
+            <span class="section-icon orange-icon">${iconSvg('calendar')}</span>
+            <div><h2>Today's Library</h2><p>Classes scheduled for today</p></div>
           </div>
-          <button class="btn" onclick="navigate('attendance',{grade:'${esc(firstClass.grade)}',section:'${esc(firstClass.section)}'})">Open</button>
+          <span class="pill amber">${d.timetable.length} classes</span>
         </div>
-      ` : '<div class="empty">No library sessions scheduled today.</div>'}
+        ${firstClass ? `
+          <div class="today-session premium-session">
+            <div class="session-time"><strong>${esc(firstClass.start)}</strong><strong>${esc(firstClass.end)}</strong></div>
+            <div class="session-icon green-icon">${iconSvg('book')}</div>
+            <div class="session-info">
+              <strong>${esc(firstClass.classSection)}</strong>
+              <span>Open attendance for this class</span>
+            </div>
+            <button class="btn" onclick="navigate('attendance',{grade:'${esc(firstClass.grade)}',section:'${esc(firstClass.section)}'})">Open <span>${iconSvg('arrow')}</span></button>
+          </div>
+        ` : '<div class="empty">No library sessions scheduled today.</div>'}
+      </article>
+
+      <article class="dashboard-card live-card">
+        <div class="live-top"><span class="section-icon white-icon">${iconSvg('activity')}</span><span class="live-badge">NOW</span></div>
+        <div class="live-title">Ongoing Activity</div>
+        <div class="live-sub">Live library usage</div>
+        <strong class="live-number">${totalMarked}</strong>
+        <span class="live-label">Students marked today</span>
+        <div class="mini-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </article>
     </section>
 
-    <section class="grid cols-2 dashboard-stats">
-      <div class="dashboard-card mini-stat">
-        <div class="mini-value">${d.present}</div>
-        <div class="mini-label">Present marked today</div>
-        <div class="mini-icon teal">●●</div>
-      </div>
-      <div class="dashboard-card mini-stat">
-        <div class="mini-value">${d.absent}</div>
-        <div class="mini-label">Absent marked today</div>
-        <div class="mini-icon orange">●</div>
-      </div>
+    <section class="dashboard-bento action-bento">
+      <button class="dashboard-action action-orange" onclick="navigate('students')">
+        <span class="action-icon">${iconSvg('users')}</span>
+        <strong>Students</strong><small>View and manage<br>student data</small><span class="action-arrow">${iconSvg('arrow')}</span>
+      </button>
+      <button class="dashboard-action action-green" onclick="navigate('timetable')">
+        <span class="action-icon">${iconSvg('calendar')}</span>
+        <strong>Schedule</strong><small>Manage library<br>sessions</small><span class="action-arrow">${iconSvg('arrow')}</span>
+      </button>
+      <button class="dashboard-action action-orange" onclick="navigate('reports')">
+        <span class="action-icon">${iconSvg('chart')}</span>
+        <strong>Reports</strong><small>View insights<br>and analytics</small><span class="action-arrow">${iconSvg('arrow')}</span>
+      </button>
     </section>
 
-    <section class="dashboard-card feature teal-feature">
-      <div class="dash-card-head">
-        <div>
-          <h2>Attendance</h2>
-          <p>${d.present + d.absent} students marked today</p>
+    <section class="dashboard-bento bottom-bento">
+      <article class="dashboard-card attendance-card">
+        <div class="dash-card-head">
+          <div class="heading-with-icon"><span class="section-icon orange-icon">${iconSvg('check')}</span><div><h2>Attendance</h2><p>${totalMarked} students marked today</p></div></div>
+          <span class="pill present"><span class="status-dot"></span>Updated</span>
         </div>
-        <span class="pill light">Updated</span>
-      </div>
-      <button class="feature-button" onclick="navigate('attendance')">Mark / Edit Attendance <span>→</span></button>
-    </section>
-
-    <section class="dashboard-card feature reading-feature">
-      <div class="dash-card-head">
-        <div>
-          <h2>Reading Tracking</h2>
-          <p>Current cycle: Week ${esc(d.cycle)} · Four observations per month</p>
+        <div class="attendance-split">
+          <div><strong>${d.present || 0}</strong><span>Present</span></div>
+          <div><strong>${d.absent || 0}</strong><span>Absent</span></div>
         </div>
-        <span class="pill">0 records</span>
-      </div>
-      <button class="feature-button orange-button" onclick="navigate('assess')">Continue Reading Tracking <span>→</span></button>
-    </section>
-
-    <section class="dashboard-actions">
-      <button class="dashboard-action action-purple" onclick="navigate('students')">
-        <span class="action-icon">▤</span>
-        <strong>Students</strong>
-        <small>View and manage<br>student data</small>
-        <span class="action-arrow">→</span>
-      </button>
-      <button class="dashboard-action action-peach" onclick="navigate('timetable')">
-        <span class="action-icon">▣</span>
-        <strong>Schedule</strong>
-        <small>Manage library<br>sessions</small>
-        <span class="action-arrow">→</span>
-      </button>
-      <button class="dashboard-action action-mint" onclick="navigate('reports')">
-        <span class="action-icon">▤</span>
-        <strong>Reports</strong>
-        <small>View insights<br>and analytics</small>
-        <span class="action-arrow">→</span>
-      </button>
+        <button class="feature-button orange-button" onclick="navigate('attendance')">Mark / Edit Attendance <span>${iconSvg('arrow')}</span></button>
+      </article>
+      <article class="dashboard-card reading-card">
+        <div class="dash-card-head">
+          <div class="heading-with-icon"><span class="section-icon green-icon">${iconSvg('book')}</span><div><h2>Reading Tracking</h2><p>Current cycle: Week ${esc(d.cycle)}</p></div></div>
+          <span class="pill">0 records</span>
+        </div>
+        <div class="reading-preview">
+          <div class="reading-ring">${iconSvg('book')}</div>
+          <div><strong>Four observations per month</strong><span>Track Fluency, Accuracy, Vocabulary and more.</span></div>
+        </div>
+        <button class="feature-button" onclick="navigate('assess')">Continue Reading Tracking <span>${iconSvg('arrow')}</span></button>
+      </article>
     </section>`;
 }
 
@@ -924,10 +1060,10 @@ async function viewStudents(content) {
     <div class="section-title">Quick student actions</div>
     <div class="action-grid">
       <button class="action-card" onclick="navigate('add-student')">
-        <span class="action-icon">＋</span><span class="action-title">Add student</span><span class="action-meta">Create a new record</span>
+        <span class="action-icon">${iconSvg('users')}</span><span class="action-title">Add student</span><span class="action-meta">Create a new record</span>
       </button>
       <button class="action-card green" onclick="document.getElementById('stuSearch').focus()">
-        <span class="action-icon">⌕</span><span class="action-title">Find student</span><span class="action-meta">Search the directory</span>
+        <span class="action-icon">${iconSvg('users')}</span><span class="action-title">Find student</span><span class="action-meta">Search the directory</span>
       </button>
     </div>
 
@@ -1380,6 +1516,7 @@ function boot() {
   }
 }
 boot();
+
 </script>
 </body>
 </html>
