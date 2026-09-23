@@ -34,8 +34,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const API_TIMEOUT_MS = 9000;
-const API_RETRIES = 2;
+const API_TIMEOUT_MS = 20000;
+const API_RETRIES = 1;
 const pendingGets = new Map();
 const sectionCache = new Map();
 const SECTION_CACHE_MS = 5 * 60 * 1000;
@@ -152,7 +152,7 @@ function jsonpRequest(params, attempt = 0) {
     });
 
     script.async = true;
-    script.referrerPolicy = 'no-referrer';
+    script.referrerPolicy = 'strict-origin-when-cross-origin';
     script.src = API_URL + '?' + query.toString();
     document.head.appendChild(script);
   });
@@ -215,6 +215,7 @@ function messageBridgeRequest(params) {
     frame.style.opacity = '0';
     frame.style.pointerEvents = 'none';
     frame.style.border = '0';
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
     frame.src = API_URL + '?' + query.toString();
     document.body.appendChild(frame);
   });
@@ -227,7 +228,9 @@ async function apiGetWithPwaFallback(params) {
     try {
       return await messageBridgeRequest(params);
     } catch (bridgeError) {
-      throw jsonpError;
+      // Surface the bridge error because it is the second transport's actual
+      // failure and is more useful than the original JSONP error.
+      throw bridgeError;
     }
   }
 }
