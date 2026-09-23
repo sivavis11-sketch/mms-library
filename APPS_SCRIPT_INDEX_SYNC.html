@@ -6,13 +6,17 @@
 <title>MMS Library</title>
 <meta name="theme-color" content="#FF7426">
 <meta name="description" content="Library attendance and reading assessment tracking for Mathakondapalli Model School.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MMS Library">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>:root{
+<style>
+:root{
   --bg-start:#F7D8CB;
   --bg-mid:#F0D9E8;
   --bg-end:#D9C9EE;
@@ -449,6 +453,7 @@ svg{width:20px;height:20px;display:block}
 @media(max-width:640px){.profile-hero{display:block}.profile-actions{margin-top:.75rem}.profile-kpis{grid-template-columns:1fr}.profile-kpis article:last-child{grid-column:auto}.rubric-grid{grid-template-columns:1fr 1fr}.form-grid,.rubric-bento{grid-template-columns:1fr}.form-grid .wide{grid-column:auto}.assess-scale{display:none}}
 
 .connection-error{margin:2rem auto;max-width:680px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.85);border-radius:26px;box-shadow:var(--shadow-out)}.connection-error-icon{width:52px;height:52px;flex:none;display:grid;place-items:center;border-radius:17px;background:var(--orange-soft);color:var(--orange);box-shadow:var(--shadow-in)}.connection-error h2{font-family:var(--font-display);margin:.2rem 0}.connection-error p{font-size:.65rem;color:var(--muted);line-height:1.5}.connection-actions{display:flex;gap:.45rem;margin-top:.8rem}
+
 </style>
 </head>
 <body>
@@ -462,7 +467,7 @@ svg{width:20px;height:20px;display:block}
   <button data-route="reports"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M12 19V5M20 19v-7"/><path d="M3 19h18"/></svg></span>Reports</button>
 </div><div id="topbar">
       <div class="brand-mobile">
-        <img src="" alt="MMS Library">
+        <img src="./icons/icon-96.png" alt="MMS Library">
         <div class="name">MMS Library</div>
       </div>
       <div class="date" id="topbarDate"></div>
@@ -481,66 +486,13 @@ svg{width:20px;height:20px;display:block}
 
 <div id="toast"></div>
 
-<script>/* MMS Library — app shell, router, and views */
+<script>
+// Paste your deployed Apps Script Web App URL below (ends in /exec).
+// Deploy > New deployment > Web app, then copy the URL it gives you.
+const API_URL = "https://script.google.com/macros/s/AKfycbyefUrMjn2-Wey23T7Fof0XQ_4g2GBsogSh37AyetEo8Rcc4h-uzK9wV6JKGXGPGv8X/exec";
 
-const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
-const RUBRIC_LABELS = {
-  fluency:'Fluency', accuracy:'Accuracy', vocabulary:'Vocabulary',
-  comprehension:'Comprehension', expression:'Expression', confidence:'Confidence'
-};
-const GRADES = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-
-const state = {
-  route: 'dashboard',
-  params: {},
-};
-
-/* ---------------- API client ---------------- */
-/*
- * MMS Library supports two runtimes:
- * 1) GitHub/PWA: cross-origin JSONP + form POST to the deployed Apps Script API.
- * 2) Apps Script HtmlService: use google.script.run directly. This avoids
- *    the HtmlService sandbox/CSP blocking the JSONP <script>
-/* MMS Library — app shell, router, and views */
-
-const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
-const RUBRIC_LABELS = {
-  fluency:'Fluency', accuracy:'Accuracy', vocabulary:'Vocabulary',
-  comprehension:'Comprehension', expression:'Expression', confidence:'Confidence'
-};
-const GRADES = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-
-const state = {
-  route: 'dashboard',
-  params: {},
-};
-
-/* ---------------- API client ---------------- */
-/*
- * MMS Library supports two runtimes:
- * 1) GitHub/PWA: cross-origin JSONP + form POST to the deployed Apps Script API.
- * 2) Apps Script HtmlService: use google.script.run directly. This avoids
- *    the HtmlService sandbox/CSP blocking the JSONP <script>
-/* MMS Library — app shell, router, and views */
-
-const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
-const RUBRIC_LABELS = {
-  fluency:'Fluency', accuracy:'Accuracy', vocabulary:'Vocabulary',
-  comprehension:'Comprehension', expression:'Expression', confidence:'Confidence'
-};
-const GRADES = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-
-const state = {
-  route: 'dashboard',
-  params: {},
-};
-
-/* ---------------- API client ---------------- */
-/*
- * MMS Library supports two runtimes:
- * 1) GitHub/PWA: cross-origin JSONP + form POST to the deployed Apps Script API.
- * 2) Apps Script HtmlService: use google.script.run directly. This avoids
- *    the HtmlService sandbox/CSP blocking the JSONP <script>
+</script>
+<script>
 /* MMS Library — app shell, router, and views */
 
 const RUBRIC_KEYS = ['fluency','accuracy','vocabulary','comprehension','expression','confidence'];
