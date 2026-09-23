@@ -170,6 +170,7 @@ function messageBridgeRequest(params) {
     const frame = document.createElement('iframe');
     const token = '__mmsBridge_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     let settled = false;
+    let ready = false;
 
     const timeout = setTimeout(() => {
       cleanup();
@@ -182,9 +183,35 @@ function messageBridgeRequest(params) {
       try { frame.remove(); } catch (err) {}
     }
 
+    function sendRequest() {
+      if (settled || !ready || !frame.contentWindow) return;
+      try {
+        frame.contentWindow.postMessage({
+          source: 'mms-library-bridge',
+          token,
+          action: params.action,
+          params: Object.fromEntries(
+            Object.entries(params).filter(([key]) => key !== 'api')
+          )
+        }, '*');
+      } catch (err) {
+        cleanup();
+        reject(err);
+      }
+    }
+
     function onMessage(event) {
       const data = event && event.data;
-      if (!data || data.source !== 'mms-library-api' || data.token !== token) return;
+
+      if (data && data.source === 'mms-library-bridge' && data.ready) {
+        if (event.source !== frame.contentWindow) return;
+        ready = true;
+        sendRequest();
+        return;
+      }
+
+      if (!data || data.source !== 'mms-library-bridge' || data.token !== token) return;
+      if (event.source !== frame.contentWindow) return;
 
       settled = true;
       cleanup();
@@ -199,15 +226,7 @@ function messageBridgeRequest(params) {
 
     window.addEventListener('message', onMessage);
 
-    const query = new URLSearchParams({
-      ...params,
-      transport: 'message',
-      token,
-      origin: location.origin,
-      _t: Date.now().toString()
-    });
-
-    frame.title = 'MMS Library API';
+    frame.title = 'MMS Library API Bridge';
     frame.setAttribute('aria-hidden', 'true');
     frame.style.position = 'fixed';
     frame.style.width = '1px';
@@ -215,7 +234,13 @@ function messageBridgeRequest(params) {
     frame.style.opacity = '0';
     frame.style.pointerEvents = 'none';
     frame.style.border = '0';
-    frame.src = API_URL + '?' + query.toString();
+
+    frame.addEventListener('load', () => {
+      ready = true;
+      sendRequest();
+    }, { once: false });
+
+    frame.src = API_URL + '?bridge=1&_t=' + Date.now().toString();
     document.body.appendChild(frame);
   });
 }
