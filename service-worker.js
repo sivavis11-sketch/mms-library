@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mms-library-v6';
+const CACHE_NAME = 'mms-library-v7';
 const SHELL_FILES = [
   './',
   './index.html',
