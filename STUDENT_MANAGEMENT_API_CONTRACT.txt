@@ -1,0 +1,63 @@
+MMS LIBRARY — STUDENT MANAGEMENT API CONTRACT
+
+The redesigned PWA now calls three additional Apps Script POST actions.
+
+1) addStudent
+Payload:
+{
+  "admissionNumber": "ADM001",
+  "studentName": "Student Name",
+  "grade": "5",
+  "section": "A"
+}
+
+Rules:
+- admissionNumber is required and must be unique.
+- studentName, grade and section are required.
+- Create the student in the existing student/master data source.
+- Do not create attendance or reading-history rows during student creation.
+
+2) updateStudent
+Payload:
+{
+  "admissionNumber": "ADM001",
+  "studentName": "Updated Name",
+  "grade": "5",
+  "section": "A"
+}
+
+Rules:
+- admissionNumber is the immutable lookup key and must NOT be changed.
+- Update the student's master record only.
+- Preserve all existing attendance and reading assessment history.
+- Do not duplicate the student.
+
+3) moveStudent
+Payload:
+{
+  "admissionNumber": "ADM001",
+  "grade": "5",
+  "section": "B"
+}
+
+Rules:
+- admissionNumber is the immutable lookup key.
+- Update the student's current grade/section in the master record.
+- Preserve all attendance and reading assessment history.
+- This action is intended for moving a student to another section within the same grade.
+
+Frontend behavior:
+- Students directory: Add / Edit / Move actions.
+- Student profile: Edit data / Move section actions.
+- Add Student: name, admission number, grade, section.
+- Edit Student: name, grade, section; admission number is read-only.
+- Move Student: choose an existing section or enter a new section.
+- After a successful mutation the section cache is cleared and the profile/directory is refreshed.
+
+IMPORTANT:
+The existing Apps Script project/database implementation is not stored in this GitHub repository. Do not guess the sheet name, column indexes, or database schema. Add the three actions to the existing doPost routing and implement them using the same student/master-data functions already used by getStudents() and getStudentProfile().
+
+After updating Apps Script:
+1. Deploy a NEW VERSION of the existing Web App.
+2. Keep the same /exec URL if possible.
+3. Reload the PWA after the service-worker cache update.
