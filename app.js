@@ -40,21 +40,71 @@ const pendingGets = new Map();
 const sectionCache = new Map();
 const SECTION_CACHE_MS = 5 * 60 * 1000;
 
+const APPS_SCRIPT_RUN_TIMEOUT_MS = 12000;
+
 function appsScriptGet(action, params) {
   return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(err => reject(new Error(String(err && err.message || err || 'Apps Script request failed'))))
-      .libraryApiGet(action, params || {});
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Apps Script request timed out while loading ' + action + '.'));
+    }, APPS_SCRIPT_RUN_TIMEOUT_MS);
+
+    try {
+      google.script.run
+        .withSuccessHandler(data => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(data);
+        })
+        .withFailureHandler(err => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          reject(new Error(String(err && err.message || err || 'Apps Script request failed')));
+        })
+        .libraryApiGet(action, params || {});
+    } catch (err) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    }
   });
 }
 
 function appsScriptPost(action, payload) {
   return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(err => reject(new Error(String(err && err.message || err || 'Apps Script request failed'))))
-      .libraryApiPost(action, payload || {});
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Apps Script request timed out while saving ' + action + '.'));
+    }, APPS_SCRIPT_RUN_TIMEOUT_MS);
+
+    try {
+      google.script.run
+        .withSuccessHandler(data => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(data);
+        })
+        .withFailureHandler(err => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          reject(new Error(String(err && err.message || err || 'Apps Script request failed')));
+        })
+        .libraryApiPost(action, payload || {});
+    } catch (err) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    }
   });
 }
 
@@ -343,7 +393,20 @@ async function render() {
     if (String(err.message) === 'CONFIG_MISSING') {
       content.innerHTML = setupBanner();
     } else {
-      content.innerHTML = `<div class="empty">Couldn't load this — ${esc(err.message)}</div>`;
+      const msg = String(err && err.message || err || 'Unknown error');
+      content.innerHTML = `
+        <div class="connection-error dashboard-card">
+          <div class="connection-error-icon">${iconSvg('activity')}</div>
+          <div>
+            <div class="eyebrow">Library connection</div>
+            <h2>We couldn't load this screen</h2>
+            <p>${esc(msg)}</p>
+            <div class="connection-actions">
+              <button class="btn" onclick="render()">Try again</button>
+              <button class="btn ghost" onclick="navigate('dashboard')">Back to dashboard</button>
+            </div>
+          </div>
+        </div>`;
     }
   }
 }
