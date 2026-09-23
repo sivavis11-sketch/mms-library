@@ -299,34 +299,103 @@ async function viewDashboard(content) {
       ${setupBanner()}`;
     return;
   }
+
   const d = await apiGet('dashboard', { date: todayStr() });
+  const firstClass = d.timetable && d.timetable.length ? d.timetable[0] : null;
+
   content.innerHTML = `
-    <div class="page-head">
-      <div class="eyebrow">${esc(d.day)}</div>
-      <h1>Good day 👋</h1>
-      <p>Here's what's happening in the library today.</p>
-    </div>
-    <div class="grid cols-3">
-      <div class="stat dark"><div class="label">Present today</div><div class="value">${d.present}</div></div>
-      <div class="stat"><div class="label">Absent today</div><div class="value">${d.absent}</div></div>
-      <div class="stat"><div class="label">Reading cycle</div><div class="value">C${d.cycle}</div></div>
-    </div>
-    <div class="section-title">Today's timetable</div>
-    <div class="card">
-      ${d.timetable.length ? d.timetable.map(t => `
-        <div class="list-row">
-          <div class="main">
-            <div class="title">${esc(t.classSection)}</div>
-            <div class="meta">${esc(t.start)} – ${esc(t.end)}${t.note ? ' · ' + esc(t.note) : ''}</div>
+    <section class="library-welcome">
+      <div>
+        <div class="eyebrow">${esc(String(d.day || '').toUpperCase())} · ${esc(niceDate(todayStr()))}</div>
+        <h1>Mathakondapalli<br>Model School</h1>
+        <div class="library-wordmark">LIBRARY</div>
+      </div>
+      <div class="welcome-person">
+        <div class="welcome-avatar">●</div>
+        <div>
+          <div class="welcome-small">Good Morning,</div>
+          <div class="welcome-name">Librarian!</div>
+          <div class="welcome-date">${esc(niceDate(todayStr()))}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-card today-library">
+      <div class="dash-card-head">
+        <div>
+          <h2>Today's Library</h2>
+          <p>Classes scheduled for today</p>
+        </div>
+        <span class="pill amber">${d.timetable.length} classes</span>
+      </div>
+      ${firstClass ? `
+        <div class="today-session">
+          <div class="session-time"><strong>${esc(firstClass.start)}</strong><strong>${esc(firstClass.end)}</strong></div>
+          <div class="session-icon">▣</div>
+          <div class="session-info">
+            <strong>${esc(firstClass.classSection)}</strong>
+            <span>Open attendance for this class</span>
           </div>
-          <button class="btn ghost" onclick="navigate('attendance',{grade:'${esc(t.grade)}',section:'${esc(t.section)}'})">Mark</button>
-        </div>`).join('') : '<div class="empty">No library sessions scheduled today.</div>'}
-    </div>
-    <div class="section-title">Quick actions</div>
-    <div class="grid cols-2">
-      <button class="btn block" onclick="navigate('attendance')">Mark Attendance</button>
-      <button class="btn ghost block" onclick="navigate('assess')">Reading Assessment</button>
-    </div>`;
+          <button class="btn" onclick="navigate('attendance',{grade:'${esc(firstClass.grade)}',section:'${esc(firstClass.section)}'})">Open</button>
+        </div>
+      ` : '<div class="empty">No library sessions scheduled today.</div>'}
+    </section>
+
+    <section class="grid cols-2 dashboard-stats">
+      <div class="dashboard-card mini-stat">
+        <div class="mini-value">${d.present}</div>
+        <div class="mini-label">Present marked today</div>
+        <div class="mini-icon teal">●●</div>
+      </div>
+      <div class="dashboard-card mini-stat">
+        <div class="mini-value">${d.absent}</div>
+        <div class="mini-label">Absent marked today</div>
+        <div class="mini-icon orange">●</div>
+      </div>
+    </section>
+
+    <section class="dashboard-card feature teal-feature">
+      <div class="dash-card-head">
+        <div>
+          <h2>Attendance</h2>
+          <p>${d.present + d.absent} students marked today</p>
+        </div>
+        <span class="pill light">Updated</span>
+      </div>
+      <button class="feature-button" onclick="navigate('attendance')">Mark / Edit Attendance <span>→</span></button>
+    </section>
+
+    <section class="dashboard-card feature reading-feature">
+      <div class="dash-card-head">
+        <div>
+          <h2>Reading Tracking</h2>
+          <p>Current cycle: Week ${esc(d.cycle)} · Four observations per month</p>
+        </div>
+        <span class="pill">0 records</span>
+      </div>
+      <button class="feature-button orange-button" onclick="navigate('assess')">Continue Reading Tracking <span>→</span></button>
+    </section>
+
+    <section class="dashboard-actions">
+      <button class="dashboard-action action-purple" onclick="navigate('students')">
+        <span class="action-icon">▤</span>
+        <strong>Students</strong>
+        <small>View and manage<br>student data</small>
+        <span class="action-arrow">→</span>
+      </button>
+      <button class="dashboard-action action-peach" onclick="navigate('timetable')">
+        <span class="action-icon">▣</span>
+        <strong>Schedule</strong>
+        <small>Manage library<br>sessions</small>
+        <span class="action-arrow">→</span>
+      </button>
+      <button class="dashboard-action action-mint" onclick="navigate('reports')">
+        <span class="action-icon">▤</span>
+        <strong>Reports</strong>
+        <small>View insights<br>and analytics</small>
+        <span class="action-arrow">→</span>
+      </button>
+    </section>`;
 }
 
 /* ---------------- TIMETABLE ---------------- */
