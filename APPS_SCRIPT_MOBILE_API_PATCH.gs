@@ -10,6 +10,13 @@
  *
  * This keeps JSONP for normal browsers and adds an iframe/postMessage
  * transport for mobile standalone PWAs.
+ *
+ * 3) Also paste messageBridgeOut_() (bottom of this file) into Code.gs.
+ *
+ * Note: ContentService has no HTML mime type, so the bridge page must be
+ * served with HtmlService. HtmlService wraps the page in Google's own
+ * iframe, which is why it posts to window.top (the PWA) rather than
+ * window.parent.
  */
 
 function handleApiGet_(e) {
@@ -65,28 +72,20 @@ function handleApiGet_(e) {
         throw new Error('Unknown action: ' + action);
     }
 
+    // Turn sheet Date/time cells into plain strings (helper lives in
+    // APPS_SCRIPT_API_BRIDGE.gs, which SYNC_TO_APPS_SCRIPT.ps1 pushes).
+    if (typeof libraryApiSafe_ === 'function') data = libraryApiSafe_(data);
+
     const payload = { ok: true, data: data };
 
     // Mobile standalone/PWA bridge.
     if (transport === 'message') {
-      const safeOrigin = origin && origin !== 'null' ? origin : '*';
-      const safeToken = JSON.stringify(token);
-      const body = JSON.stringify(payload);
-
-      return ContentService
-        .createTextOutput(
-          '<!doctype html><html><body><script>' +
-          'window.parent.postMessage(' +
-          JSON.stringify({
-            source: 'mms-library-api',
-            token: token,
-            ok: true,
-            data: data
-          }) +
-          ',' + JSON.stringify(safeOrigin) +
-          ');</script></body></html>'
-        )
-        .setMimeType(ContentService.MimeType.HTML);
+      return messageBridgeOut_(origin, {
+        source: 'mms-library-api',
+        token: token,
+        ok: true,
+        data: data
+      });
     }
 
     // Existing JSONP transport.
@@ -109,22 +108,12 @@ function handleApiGet_(e) {
     const message = String(err && err.message || err);
 
     if (transport === 'message') {
-      const safeOrigin = origin && origin !== 'null' ? origin : '*';
-
-      return ContentService
-        .createTextOutput(
-          '<!doctype html><html><body><script>' +
-          'window.parent.postMessage(' +
-          JSON.stringify({
-            source: 'mms-library-api',
-            token: token,
-            ok: false,
-            error: message
-          }) +
-          ',' + JSON.stringify(safeOrigin) +
-          ');</script></body></html>'
-        )
-        .setMimeType(ContentService.MimeType.HTML);
+      return messageBridgeOut_(origin, {
+        source: 'mms-library-api',
+        token: token,
+        ok: false,
+        error: message
+      });
     }
 
     if (callback && /^[A-Za-z_$][0-9A-Za-z_$]*$/.test(callback)) {
@@ -137,4 +126,18 @@ function handleApiGet_(e) {
 
     return jsonOut_({ok:false, error:message});
   }
+}
+
+function messageBridgeOut_(origin, message) {
+  const safeOrigin = origin && origin !== 'null' ? origin : '*';
+  // Escape "<" so data such as "</script>" cannot break out of the script tag.
+  const json = JSON.stringify(message).replace(/</g, '\\u003c');
+
+  return HtmlService
+    .createHtmlOutput(
+      '<!doctype html><html><body><script>' +
+      'window.top.postMessage(' + json + ',' + JSON.stringify(safeOrigin) + ');' +
+      '</script></body></html>'
+    )
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

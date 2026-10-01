@@ -6,7 +6,34 @@
  * Index.html is hosted by Apps Script.
  */
 
+/**
+ * google.script.run returns null for the WHOLE result when it contains a
+ * Date (for example a time cell read from the timetable sheet). Convert
+ * Dates to plain strings so the frontend always receives the data.
+ */
+function libraryApiSafe_(value) {
+  const tz = Session.getScriptTimeZone() || 'Asia/Kolkata';
+  return JSON.parse(JSON.stringify(value === undefined ? null : value, function (key, v) {
+    const raw = this[key];
+    if (Object.prototype.toString.call(raw) === '[object Date]') {
+      // Sheets stores time-only cells as dates in 1899.
+      return raw.getFullYear() < 1900
+        ? Utilities.formatDate(raw, tz, 'HH:mm')
+        : Utilities.formatDate(raw, tz, 'yyyy-MM-dd');
+    }
+    return v;
+  }));
+}
+
 function libraryApiGet(action, params) {
+  return libraryApiSafe_(libraryApiGet_(action, params));
+}
+
+function libraryApiPost(action, payload) {
+  return libraryApiSafe_(libraryApiPost_(action, payload));
+}
+
+function libraryApiGet_(action, params) {
   const p = params || {};
   const a = String(action || '');
 
@@ -54,7 +81,7 @@ function libraryApiGet(action, params) {
   }
 }
 
-function libraryApiPost(action, payload) {
+function libraryApiPost_(action, payload) {
   const p = payload || {};
   const a = String(action || '');
 

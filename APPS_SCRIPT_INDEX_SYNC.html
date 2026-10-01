@@ -535,7 +535,8 @@ const pendingGets = new Map();
 const sectionCache = new Map();
 const SECTION_CACHE_MS = 5 * 60 * 1000;
 
-const APPS_SCRIPT_RUN_TIMEOUT_MS = 12000;
+// Apps Script cold starts and large sheets regularly take longer than 12s.
+const APPS_SCRIPT_RUN_TIMEOUT_MS = 45000;
 
 function appsScriptGet(action, params) {
   return new Promise((resolve, reject) => {
@@ -915,11 +916,23 @@ const routes = ['dashboard','timetable','students','attendance','reports','profi
 function navigate(route, params) {
   state.route = route;
   state.params = params || {};
-  location.hash = '#/' + route + (params && params.id ? '/' + params.id : '');
+  const hash = '#/' + route + (params && params.id ? '/' + encodeURIComponent(params.id) : '');
+  // Changing the hash fires hashchange, which would render a second time and
+  // drop params such as grade/section. Remember the hash we set so that the
+  // listener can ignore it.
+  if (location.hash !== hash) {
+    state.ignoreHash = hash;
+    location.hash = hash;
+  }
   render();
 }
 
 window.addEventListener('hashchange', () => {
+  if (state.ignoreHash && location.hash === state.ignoreHash) {
+    state.ignoreHash = null;
+    return;
+  }
+  state.ignoreHash = null;
   const parts = location.hash.replace('#/','').split('/');
   state.route = parts[0] || 'dashboard';
   state.params = parts[1] ? { id: decodeURIComponent(parts[1]) } : {};
@@ -1011,7 +1024,9 @@ async function viewDashboard(content) {
   }
 
   const d = await apiGet('dashboard', { date: todayStr() });
-  const firstClass = d.timetable && d.timetable.length ? d.timetable[0] : null;
+  if (!d) throw new Error('The library server returned no data for the dashboard.');
+  if (!Array.isArray(d.timetable)) d.timetable = [];
+  const firstClass = d.timetable.length ? d.timetable[0] : null;
   const totalMarked = Number(d.present || 0) + Number(d.absent || 0);
 
   content.innerHTML = `
@@ -1285,7 +1300,7 @@ async function viewStudentForm(content, mode, admissionNumber) {
   const nameInput=document.getElementById('stuNameForm'),admInput=document.getElementById('stuAdmForm'),gradeSel=document.getElementById('stuGradeForm'),sectionSel=document.getElementById('stuSectionForm'),saveBtn=document.getElementById('studentSaveBtn');
   async function loadFormSections(selected){sectionSel.innerHTML='<option value="">Select section</option>';if(!gradeSel.value)return;await loadSectionsInto(sectionSel,gradeSel.value,selected)}
   gradeSel.addEventListener('change',()=>loadFormSections(''));await loadFormSections(existing?existing.section:'');
-  saveBtn.addEventListener('click',async()=>{const studentName=nameInput.value.trim(),admission=admInput.value.trim(),grade=gradeSel.value,section=sectionSel.value.trim();if(!studentName||!admission||!grade||!section){toast('Please complete name, admission number, grade and section.');return}saveBtn.disabled=true;saveBtn.textContent=edit?'Saving…':'Adding…';try{if(edit){await apiPost('updateStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student data updated.');setTimeout(()=>navigate('profile',{id:admission}),350)}else{await apiPost('addStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student added.');setTimeout(()=>navigate('students'),350)}}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.textContent=edit?'Save changes':'Add student'}});
+  saveBtn.addEventListener('click',async()=>{const studentName=nameInput.value.trim(),admission=admInput.value.trim(),grade=gradeSel.value,section=sectionSel.value.trim();if(!studentName||!admission||!grade||!section){toast('Please complete name, admission number, grade and section.');return}saveBtn.disabled=true;saveBtn.textContent=edit?'Saving…':'Adding…';try{if(edit){await apiPost('updateStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student data updated.');setTimeout(()=>navigate('profile',{id:admission}),350)}else{await apiPost('addStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student added.');setTimeout(()=>navigate('students'),350)}}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.innerHTML=(edit?'Save changes ':'Add student ')+iconSvg('arrow')}});
 }
 
 /* ---------------- MOVE STUDENT ---------------- */
@@ -1299,7 +1314,7 @@ async function viewMoveStudent(content, admissionNumber) {
       <article class="dashboard-card move-form-card"><div class="section-icon green-icon">${iconSvg('arrow')}</div><div class="eyebrow">Destination</div><h2>Choose new section</h2><p>Keep the same student record and move only the section.</p><div class="field"><label>Existing section</label><select id="moveSection"><option value="">Select section</option></select></div><div class="field"><label>Or enter new section</label><input id="moveNewSection" type="text" placeholder="Example: B"></div><div class="form-actions"><button class="btn ghost" onclick="navigate('profile',{id:'${esc(admissionNumber)}'})">Cancel</button><button class="btn green" id="moveSave">Move to section ${iconSvg('arrow')}</button></div></article>
     </section>`;
   const select=document.getElementById('moveSection'),newSection=document.getElementById('moveNewSection'),save=document.getElementById('moveSave');await loadSectionsInto(select,s.grade,'');
-  save.addEventListener('click',async()=>{const target=newSection.value.trim()||select.value.trim();if(!target){toast('Select or enter the destination section.');return}if(target===String(s.section)){toast('Choose a different section.');return}save.disabled=true;save.textContent='Moving…';try{await apiPost('moveStudent',{admissionNumber:s.admissionNumber,grade:s.grade,section:target});invalidateStudentCaches();toast('Student moved to Section '+target+'.');setTimeout(()=>navigate('profile',{id:s.admissionNumber}),350)}catch(err){toast('Could not move student: '+err.message)}finally{save.disabled=false;save.textContent='Move to section'}});
+  save.addEventListener('click',async()=>{const target=newSection.value.trim()||select.value.trim();if(!target){toast('Select or enter the destination section.');return}if(target===String(s.section)){toast('Choose a different section.');return}save.disabled=true;save.textContent='Moving…';try{await apiPost('moveStudent',{admissionNumber:s.admissionNumber,grade:s.grade,section:target});invalidateStudentCaches();toast('Student moved to Section '+target+'.');setTimeout(()=>navigate('profile',{id:s.admissionNumber}),350)}catch(err){toast('Could not move student: '+err.message)}finally{save.disabled=false;save.innerHTML='Move to section '+iconSvg('arrow')}});
 }
 
 /* ---------------- ATTENDANCE ---------------- */
@@ -1343,7 +1358,7 @@ async function viewAssess(content) {
   async function refreshSections(){sectionSel.innerHTML='<option value="">Select</option>';studentSel.innerHTML='<option value="">Select grade & section first</option>';formEl.style.display='none';if(!gradeSel.value)return;const sections=await apiGet('sections',{grade:gradeSel.value});sections.forEach(s=>sectionSel.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">Section ${esc(s)}</option>`))}
   async function refreshStudents(){studentSel.innerHTML='<option value="">Select</option>';formEl.style.display='none';if(!gradeSel.value||!sectionSel.value)return;const students=await apiGet('students',{grade:gradeSel.value,section:sectionSel.value});students.forEach(s=>studentSel.insertAdjacentHTML('beforeend',`<option value="${esc(s.admissionNumber)}" data-name="${esc(s.studentName)}">${esc(s.studentName)}</option>`))}
   studentSel.addEventListener('change',()=>{formEl.style.display=studentSel.value?'block':'none'});gradeSel.addEventListener('change',refreshSections);sectionSel.addEventListener('change',refreshStudents);
-  document.getElementById('asSave').addEventListener('click',async e=>{const btn=e.target;btn.disabled=true;btn.textContent='Saving…';try{const opt=studentSel.selectedOptions[0];await apiPost('saveReadingAssessment',{date:document.getElementById('asDate').value,admissionNumber:studentSel.value,studentName:opt.dataset.name,grade:gradeSel.value,section:sectionSel.value,observation:document.getElementById('asObs').value,...scores});toast('Assessment saved.');document.getElementById('asObs').value=''}catch(err){toast('Could not save: '+err.message)}finally{btn.disabled=false;btn.textContent='Save Assessment'}});
+  document.getElementById('asSave').addEventListener('click',async e=>{const btn=e.currentTarget;if(!studentSel.value){toast('Select a student first.');return}btn.disabled=true;btn.textContent='Saving…';try{const opt=studentSel.selectedOptions[0];await apiPost('saveReadingAssessment',{date:document.getElementById('asDate').value,admissionNumber:studentSel.value,studentName:opt.dataset.name,grade:gradeSel.value,section:sectionSel.value,observation:document.getElementById('asObs').value,...scores});toast('Assessment saved.');document.getElementById('asObs').value=''}catch(err){toast('Could not save: '+err.message)}finally{btn.disabled=false;btn.innerHTML='Save Assessment '+iconSvg('check')}});
 }
 
 /* ---------------- REPORTS ---------------- */
@@ -1353,7 +1368,7 @@ async function viewReports(content){
     <section class="screen-hero reports-hero"><div><div class="eyebrow">Monthly summary</div><h1>Reports</h1><p>View library attendance and reading progress at a glance.</p></div><div class="field report-month"><label>Month</label><input id="repMonth" type="month" value="${month}"></div></section>
     <section class="report-kpis"><article><span class="mini-icon orange">${iconSvg('check')}</span><div><small>Students tracked</small><strong id="repStudents">—</strong></div></article><article><span class="mini-icon teal">${iconSvg('calendar')}</span><div><small>Attendance records</small><strong id="repAttendance">—</strong></div></article><article><span class="mini-icon purple">${iconSvg('book')}</span><div><small>Reading assessments</small><strong id="repReading">—</strong></div></article><article><span class="mini-icon orange">${iconSvg('chart')}</span><div><small>Avg attendance</small><strong id="repAvg">—</strong></div></article></section>
     <section class="reports-bento"><article class="report-chart-card dashboard-card"><div class="dash-card-head"><div><div class="eyebrow">Student performance</div><h2>Monthly activity</h2></div><span class="pill">Live data</span></div><div class="report-bars" id="repBars"></div></article><article class="report-export-card dashboard-card"><div class="mini-icon orange">${iconSvg('document')}</div><h2>Export Reports</h2><p>Use the monthly data for school records and parent communication.</p><button class="btn block" onclick="toast('PDF export can be connected next.')">PDF Report</button><button class="btn green block" onclick="toast('Excel export can be connected next.')">Excel Report</button></article><article class="report-list-card dashboard-card"><div class="dash-card-head"><div><div class="eyebrow">Monthly student report</div><h2>Student insights</h2></div><span class="pill" id="repCount">0</span></div><div id="repList"><div class="loading"><div class="spinner"></div>Loading…</div></div></article></section>`;
-  async function load(){const list=document.getElementById('repList');setLoading(list);const r=await apiGet('reports',{month:document.getElementById('repMonth').value});const rows=r.students.filter(s=>s.attendanceTotal||s.assessments);const avg=rows.length?Math.round(rows.reduce((n,s)=>n+Number(s.attendancePct||0),0)/rows.length):0;document.getElementById('repStudents').textContent=rows.length;document.getElementById('repAttendance').textContent=rows.reduce((n,s)=>n+Number(s.attendanceTotal||0),0);document.getElementById('repReading').textContent=rows.reduce((n,s)=>n+Number(s.assessments||0),0);document.getElementById('repAvg').textContent=avg+'%';document.getElementById('repCount').textContent=rows.length+' students';document.getElementById('repBars').innerHTML=rows.slice(0,12).map((s,i)=>`<div class="report-bar"><span>${esc(s.studentName.split(' ')[0])}</span><i><b style="width:${Math.min(100,Number(s.attendancePct||0))}%"></b></i><strong>${Number(s.attendancePct||0)}%</strong></div>`).join('')||'<div class="empty">No monthly activity recorded.</div>';list.innerHTML=rows.length?rows.map(s=>`<div class="report-row" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})"><div class="avatar">${esc(initials(s.studentName))}</div><div class="student-main"><strong>${esc(s.studentName)}</strong><span>Grade ${esc(s.grade)} - ${esc(s.section)}</span></div><span class="pill ${Number(s.attendancePct)>=75?'present':'absent'}">${Number(s.attendancePct||0)}% att.</span><span class="pill amber">${Number(s.readingScore||0)}% read.</span></div>`).join(''):'<div class="empty">No activity recorded for this month yet.</div>'}
+  async function load(){const list=document.getElementById('repList');setLoading(list);const r=await apiGet('reports',{month:document.getElementById('repMonth').value});const rows=r.students.filter(s=>s.attendanceTotal||s.assessments);const avg=rows.length?Math.round(rows.reduce((n,s)=>n+Number(s.attendancePct||0),0)/rows.length):0;document.getElementById('repStudents').textContent=rows.length;document.getElementById('repAttendance').textContent=rows.reduce((n,s)=>n+Number(s.attendanceTotal||0),0);document.getElementById('repReading').textContent=rows.reduce((n,s)=>n+Number(s.assessments||0),0);document.getElementById('repAvg').textContent=avg+'%';document.getElementById('repCount').textContent=rows.length+' students';document.getElementById('repBars').innerHTML=rows.slice(0,12).map((s,i)=>`<div class="report-bar"><span>${esc(String(s.studentName||'').split(' ')[0])}</span><i><b style="width:${Math.min(100,Number(s.attendancePct||0))}%"></b></i><strong>${Number(s.attendancePct||0)}%</strong></div>`).join('')||'<div class="empty">No monthly activity recorded.</div>';list.innerHTML=rows.length?rows.map(s=>`<div class="report-row" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})"><div class="avatar">${esc(initials(s.studentName))}</div><div class="student-main"><strong>${esc(s.studentName)}</strong><span>Grade ${esc(s.grade)} - ${esc(s.section)}</span></div><span class="pill ${Number(s.attendancePct)>=75?'present':'absent'}">${Number(s.attendancePct||0)}% att.</span><span class="pill amber">${Number(s.readingScore||0)}% read.</span></div>`).join(''):'<div class="empty">No activity recorded for this month yet.</div>'}
   document.getElementById('repMonth').addEventListener('change',load);load();
 }
 
