@@ -432,6 +432,7 @@ function navigate(route, params) {
     state.ignoreHash = hash;
     location.hash = hash;
   }
+  window.scrollTo(0, 0);
   render();
 }
 
@@ -461,7 +462,6 @@ function syncNavActive() {
 /* ---------------- render dispatch ---------------- */
 async function render() {
   syncNavActive();
-  document.getElementById('topbarDate').textContent = niceDate(todayStr());
   const content = document.getElementById('content');
   content.dataset.route = state.route;
   if (!apiConfigured() && state.route !== 'dashboard') {
@@ -487,16 +487,12 @@ async function render() {
     } else {
       const msg = String(err && err.message || err || 'Unknown error');
       content.innerHTML = `
-        <div class="connection-error dashboard-card">
-          <div class="connection-error-icon">${iconSvg('activity')}</div>
-          <div>
-            <div class="eyebrow">Library connection</div>
-            <h2>We couldn't load this screen</h2>
-            <p>${esc(msg)}</p>
-            <div class="connection-actions">
-              <button class="btn" onclick="render()">Try again</button>
-              <button class="btn ghost" onclick="navigate('dashboard')">Back to dashboard</button>
-            </div>
+        ${pageHead('Library connection', 'We couldn\'t load this page', '')}
+        <div class="connection-error">
+          <p>${esc(msg)}</p>
+          <div class="actions-row">
+            <button class="btn small" onclick="render()">Try again</button>
+            <button class="btn soft small" onclick="navigate('dashboard')">Back to home</button>
           </div>
         </div>`;
     }
@@ -513,142 +509,87 @@ function iconSvg(name) {
     check: '<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="3"/>',
     activity: '<path d="M3 12h4l2-5 4 10 2-5h6"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
-    arrow: '<path d="M5 12h13M13 7l5 5-5 5"/>'
+    arrow: '<path d="M5 12h13M13 7l5 5-5 5"/>',
+    play: '<path d="M7 4l13 8-13 8z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    swap: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>'
   };
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paths[name] || paths.arrow) + '</svg>';
+}
+
+/* ---------------- page building blocks ---------------- */
+function pageHead(chapter, title, meta, action) {
+  return `
+    <header class="page-head">
+      <div class="page-head-top"><span class="chapter">${chapter}</span><span class="page-meta">${meta || ''}</span></div>
+      <div class="page-title-row"><h1>${title}</h1>${action || ''}</div>
+      <div class="rule"></div>
+    </header>`;
+}
+function pageNum(n) { return `<div class="page-num">page ${n}</div>`; }
+// The orange folder-tab panel used for each page's key figure.
+function heroTab(label, body, extraClass) {
+  return `
+    <section class="hero-tab ${extraClass || ''}">
+      <div class="hero-tab-top"><span>${label}</span><i></i></div>
+      <div class="hero-tab-body on-orange">${body}</div>
+    </section>`;
+}
+function tint(i) { return 't' + ((i % 5) + 1); }
+function shortDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+}
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+function scoreClass(n) {
+  const v = Math.round(Number(n) || 0);
+  return v >= 1 && v <= 5 ? 's' + v : '';
 }
 
 /* ---------------- DASHBOARD ---------------- */
 async function viewDashboard(content) {
   if (!apiConfigured()) {
-    content.innerHTML = `
-      <div class="page-head">
-        <div class="eyebrow">Welcome</div>
-        <h1>MMS Library</h1>
-        <p>Set up the connection to your library Google Sheet to get started.</p>
-      </div>
-      ${setupBanner()}`;
+    content.innerHTML = pageHead('Welcome', 'MMS Library', esc(shortDate(todayStr()))) + setupBanner();
     return;
   }
 
   const d = await apiGet('dashboard', { date: todayStr() });
   if (!d) throw new Error('The library server returned no data for the dashboard.');
   if (!Array.isArray(d.timetable)) d.timetable = [];
-  const firstClass = d.timetable.length ? d.timetable[0] : null;
-  const totalMarked = Number(d.present || 0) + Number(d.absent || 0);
+  const present = Number(d.present || 0), absent = Number(d.absent || 0);
+  const totalMarked = present + absent;
+
+  const sessions = d.timetable.map((t, i) => `
+    <div class="ledger-row">
+      <div class="time-block ${tint(i + 1)}"><strong>${esc(t.start)}</strong><span>${esc(t.end)}</span></div>
+      <div class="row-main"><strong>${t.grade ? `Grade ${esc(t.grade)} · ${esc(t.section)}` : esc(t.classSection)}</strong><span>${esc(t.note || 'Regular library session')}</span></div>
+      <button class="icon-btn" aria-label="Open attendance" onclick="navigate('attendance',{grade:'${esc(t.grade)}',section:'${esc(t.section)}'})">${iconSvg('arrow')}</button>
+    </div>`).join('');
 
   content.innerHTML = `
-    <section class="library-welcome premium-hero">
-      <div class="welcome-copy">
-        <div class="eyebrow">${esc(String(d.day || '').toUpperCase())} · ${esc(niceDate(todayStr()))}</div>
-        <h1>Mathakondapalli<br>Model School</h1>
-        <div class="library-wordmark">LIBRARY</div>
-        <p class="hero-tagline">A reader today. A leader tomorrow.</p>
-      </div>
-      <div class="welcome-person">
-        <div class="welcome-avatar icon-orb">${iconSvg('sun')}</div>
-        <div>
-          <div class="welcome-small">Good Morning,</div>
-          <div class="welcome-name">Librarian!</div>
-          <div class="welcome-date">${esc(niceDate(todayStr()))}</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="dashboard-bento kpi-bento">
-      <article class="dashboard-card kpi-card kpi-orange">
-        <div class="kpi-icon">${iconSvg('users')}</div>
-        <div class="kpi-copy"><span>Total Students</span><strong>—</strong><small>Student directory</small></div>
-        <span class="kpi-arrow">${iconSvg('arrow')}</span>
-      </article>
-      <article class="dashboard-card kpi-card kpi-green">
-        <div class="kpi-icon">${iconSvg('book')}</div>
-        <div class="kpi-copy"><span>Active Readers</span><strong>—</strong><small>Reading tracking</small></div>
-        <span class="kpi-arrow">${iconSvg('arrow')}</span>
-      </article>
-      <article class="dashboard-card kpi-card kpi-orange">
-        <div class="kpi-icon">${iconSvg('calendar')}</div>
-        <div class="kpi-copy"><span>Today's Attendance</span><strong>${d.present || 0}</strong><small>of ${totalMarked || 0} students marked</small></div>
-        <span class="kpi-arrow">${iconSvg('arrow')}</span>
-      </article>
-      <article class="dashboard-card kpi-card kpi-green">
-        <div class="kpi-icon">${iconSvg('document')}</div>
-        <div class="kpi-copy"><span>Reading Records</span><strong>0</strong><small>Assessment records</small></div>
-        <span class="kpi-arrow">${iconSvg('arrow')}</span>
-      </article>
-    </section>
-
-    <section class="dashboard-bento main-bento">
-      <article class="dashboard-card today-library bento-large">
-        <div class="dash-card-head">
-          <div class="heading-with-icon">
-            <span class="section-icon orange-icon">${iconSvg('calendar')}</span>
-            <div><h2>Today's Library</h2><p>Classes scheduled for today</p></div>
-          </div>
-          <span class="pill amber">${d.timetable.length} classes</span>
-        </div>
-        ${firstClass ? `
-          <div class="today-session premium-session">
-            <div class="session-time"><strong>${esc(firstClass.start)}</strong><strong>${esc(firstClass.end)}</strong></div>
-            <div class="session-icon green-icon">${iconSvg('book')}</div>
-            <div class="session-info">
-              <strong>${esc(firstClass.classSection)}</strong>
-              <span>Open attendance for this class</span>
-            </div>
-            <button class="btn" onclick="navigate('attendance',{grade:'${esc(firstClass.grade)}',section:'${esc(firstClass.section)}'})">Open <span>${iconSvg('arrow')}</span></button>
-          </div>
-        ` : '<div class="empty">No library sessions scheduled today.</div>'}
-      </article>
-
-      <article class="dashboard-card live-card">
-        <div class="live-top"><span class="section-icon white-icon">${iconSvg('activity')}</span><span class="live-badge">NOW</span></div>
-        <div class="live-title">Ongoing Activity</div>
-        <div class="live-sub">Live library usage</div>
-        <strong class="live-number">${totalMarked}</strong>
-        <span class="live-label">Students marked today</span>
-        <div class="mini-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      </article>
-    </section>
-
-    <section class="dashboard-bento action-bento">
-      <button class="dashboard-action action-orange" onclick="navigate('students')">
-        <span class="action-icon">${iconSvg('users')}</span>
-        <strong>Students</strong><small>View and manage<br>student data</small><span class="action-arrow">${iconSvg('arrow')}</span>
-      </button>
-      <button class="dashboard-action action-green" onclick="navigate('timetable')">
-        <span class="action-icon">${iconSvg('calendar')}</span>
-        <strong>Schedule</strong><small>Manage library<br>sessions</small><span class="action-arrow">${iconSvg('arrow')}</span>
-      </button>
-      <button class="dashboard-action action-orange" onclick="navigate('reports')">
-        <span class="action-icon">${iconSvg('chart')}</span>
-        <strong>Reports</strong><small>View insights<br>and analytics</small><span class="action-arrow">${iconSvg('arrow')}</span>
-      </button>
-    </section>
-
-    <section class="dashboard-bento bottom-bento">
-      <article class="dashboard-card attendance-card">
-        <div class="dash-card-head">
-          <div class="heading-with-icon"><span class="section-icon orange-icon">${iconSvg('check')}</span><div><h2>Attendance</h2><p>${totalMarked} students marked today</p></div></div>
-          <span class="pill present"><span class="status-dot"></span>Updated</span>
-        </div>
-        <div class="attendance-split">
-          <div><strong>${d.present || 0}</strong><span>Present</span></div>
-          <div><strong>${d.absent || 0}</strong><span>Absent</span></div>
-        </div>
-        <button class="feature-button orange-button" onclick="navigate('attendance')">Mark / Edit Attendance <span>${iconSvg('arrow')}</span></button>
-      </article>
-      <article class="dashboard-card reading-card">
-        <div class="dash-card-head">
-          <div class="heading-with-icon"><span class="section-icon green-icon">${iconSvg('book')}</span><div><h2>Reading Tracking</h2><p>Current cycle: Week ${esc(d.cycle)}</p></div></div>
-          <span class="pill">0 records</span>
-        </div>
-        <div class="reading-preview">
-          <div class="reading-ring">${iconSvg('book')}</div>
-          <div><strong>Four observations per month</strong><span>Track Fluency, Accuracy, Vocabulary and more.</span></div>
-        </div>
-        <button class="feature-button" onclick="navigate('assess')">Continue Reading Tracking <span>${iconSvg('arrow')}</span></button>
-      </article>
-    </section>`;
+    ${pageHead('Chapter I', greeting(), esc(shortDate(todayStr())))}
+    ${heroTab('Attendance today', `
+      <div class="hero-stack">
+        <div class="big-num"><strong>${present}</strong><span>of ${totalMarked}</span></div>
+        <div class="chips"><span class="chip present">${present} present</span><span class="chip absent">${absent} absent</span></div>
+      </div>`, 'with-float')}
+    <div class="float-action"><button class="btn soft small" onclick="navigate('attendance')">Mark attendance <span class="knob">${iconSvg('play')}</span></button></div>
+    <div class="stat-strip">
+      <div><strong>${d.timetable.length}</strong><span>Sessions today</span></div>
+      <div><strong>${totalMarked}</strong><span>Marked today</span></div>
+      <div><strong>${esc(d.cycle || '—')}</strong><span>Reading week</span></div>
+    </div>
+    <div class="section-title">Today's sessions</div>
+    <div class="ledger">${sessions || '<div class="empty">No library sessions today.</div>'}</div>
+    <div class="actions-row">
+      <button class="btn soft" onclick="navigate('assess')">${iconSvg('book')} Reading</button>
+      <button class="btn soft" onclick="navigate('students')">${iconSvg('users')} Students</button>
+    </div>
+    ${pageNum(1)}`;
 }
 
 /* ---------------- TIMETABLE ---------------- */
@@ -657,50 +598,36 @@ async function viewTimetable(content) {
   const today = todayStr();
   let active = week.findIndex(w => w.date === today);
   if (active < 0) active = 0;
+  const total = week.reduce((n, w) => n + w.classes.length, 0);
 
   function renderDay(idx) {
     const w = week[idx];
-    const body = document.getElementById('ttBody');
     const count = w.classes.length;
-    body.innerHTML = `
-      <div class="bento-day-summary">
-        <div class="day-orb">${iconSvg('calendar')}</div>
-        <div><span class="eyebrow">${esc(w.day)}</span><h2>${esc(niceDate(w.date))}</h2><p>Library sessions and student activities</p></div>
-        <div class="day-count"><strong>${count}</strong><span>sessions</span></div>
-      </div>
-      <div class="tt-session-grid">
-      ${count ? w.classes.map((t,i) => `
-        <article class="tt-session-card ${i===0?'featured':''}">
-          <div class="tt-time"><strong>${esc(t.start)}</strong><span>${esc(t.end)}</span></div>
-          <div class="tt-type-icon ${i%2?'teal':'orange'}">${iconSvg(i%2?'book':'calendar')}</div>
-          <div class="tt-info"><strong>Grade ${esc(t.grade)} - ${esc(t.section)}</strong><span>${esc(t.classSection)}</span><small>${esc(t.note || 'Regular library session')}</small></div>
-          <div class="tt-status">${w.date===today ? '<span class="pill amber">Today</span>' : '<span class="pill">Scheduled</span>'}</div>
-          <button class="icon-button" title="Open attendance" onclick="navigate('attendance',{grade:'${esc(t.grade)}',section:'${esc(t.section)}',date:'${w.date}'})">${iconSvg('arrow')}</button>
-        </article>`).join('') : '<div class="empty">No sessions this day.</div>'}
+    document.getElementById('ttBody').innerHTML = `
+      ${heroTab(esc(shortDate(w.date)), `
+        <div class="big-num"><strong>${count}</strong><span>${count === 1 ? 'session' : 'sessions'}</span></div>
+        <span class="chip lilac">${total} this week</span>`)}
+      <div class="ledger">
+      ${count ? w.classes.map((t, i) => `
+        <div class="ledger-row">
+          <div class="time-block ${tint(i)}"><strong>${esc(t.start)}</strong><span>${esc(t.end)}</span></div>
+          <div class="row-main"><strong>Grade ${esc(t.grade)} · ${esc(t.section)}</strong><span>${esc(t.note || 'Regular library session')}</span></div>
+          <span class="tag ${w.date === today ? 'now' : ''}">${w.date === today ? 'Today' : 'Planned'}</span>
+          <button class="icon-btn" aria-label="Open attendance" onclick="navigate('attendance',{grade:'${esc(t.grade)}',section:'${esc(t.section)}',date:'${w.date}'})">${iconSvg('arrow')}</button>
+        </div>`).join('') : '<div class="empty">No sessions on this day.</div>'}
       </div>`;
   }
 
   content.innerHTML = `
-    <section class="screen-hero timetable-hero">
-      <div><div class="eyebrow">This week</div><h1>Timetable</h1><p>View library classes, activities and manage sessions.</p></div>
-      <button class="btn hero-action" onclick="toast('Session creation will be connected to the timetable workflow.')">${iconSvg('calendar')} Add Session</button>
-    </section>
+    ${pageHead('Chapter II', 'Timetable', 'This week', `<button class="btn soft tiny" onclick="toast('Adding sessions will be connected to the timetable sheet next.')">${iconSvg('plus')} Add session</button>`)}
     <div class="week-pills" id="ttTabs">
-      ${week.map((w,i)=>`<button data-i="${i}" class="${i===active?'on':''}"><span>${esc(w.day.slice(0,3))}</span><strong>${esc(w.date.slice(8,10))}</strong></button>`).join('')}
+      ${week.map((w, i) => `<button data-i="${i}" class="${i === active ? 'on' : ''}"><span>${esc(w.day.slice(0, 3))}</span><strong>${Number(w.date.slice(8, 10))}</strong></button>`).join('')}
     </div>
-    <section class="tt-bento">
-      <aside class="tt-side-card">
-        <div class="tt-side-icon">${iconSvg('calendar')}</div>
-        <h3>Weekly overview</h3>
-        <div class="tt-side-stat"><strong>${week.reduce((n,w)=>n+w.classes.length,0)}</strong><span>Total sessions</span></div>
-        <div class="tt-side-stat"><strong>${week.filter(w=>w.classes.length).length}</strong><span>Active days</span></div>
-        <div class="quote-card">“Libraries build brighter futures.”<small>MMS LIBRARY</small></div>
-      </aside>
-      <div class="dashboard-card tt-body-card" id="ttBody"></div>
-    </section>`;
+    <div class="stack" id="ttBody"></div>
+    ${pageNum(2)}`;
 
-  document.querySelectorAll('#ttTabs button').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('#ttTabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('#ttTabs button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#ttTabs button').forEach(x => x.classList.remove('on'));
     b.classList.add('on'); renderDay(Number(b.dataset.i));
   }));
   renderDay(active);
@@ -712,7 +639,7 @@ function initials(name) {
 }
 function invalidateStudentCaches(){ sectionCache.clear(); }
 async function loadSectionsInto(selectEl, grade, selected) {
-  selectEl.innerHTML='<option value="">Select section</option>';
+  selectEl.innerHTML='<option value="">Choose</option>';
   if(!grade)return [];
   const sections=await apiGet('sections',{grade});
   sections.forEach(s=>selectEl.insertAdjacentHTML('beforeend',`<option value="${esc(s)}" ${String(s)===String(selected||'')?'selected':''}>Section ${esc(s)}</option>`));
@@ -720,44 +647,34 @@ async function loadSectionsInto(selectEl, grade, selected) {
 }
 async function viewStudents(content){
   content.innerHTML=`
-    <section class="screen-hero students-hero">
-      <div><div class="eyebrow">Student management</div><h1>Students</h1><p>Search, add and manage students without leaving the library workspace.</p></div>
-      <button class="btn hero-action" onclick="navigate('add-student')">${iconSvg('users')} + Add Student</button>
-    </section>
-    <section class="student-kpis">
-      <article><span class="mini-icon orange">${iconSvg('users')}</span><div><small>Total Students</small><strong id="stuTotal">—</strong><em>Directory</em></div></article>
-      <article><span class="mini-icon teal">${iconSvg('check')}</span><div><small>Active Students</small><strong id="stuActive">—</strong><em>Current records</em></div></article>
-      <article><span class="mini-icon orange">${iconSvg('book')}</span><div><small>Grade Groups</small><strong id="stuGrades">—</strong><em>Grades represented</em></div></article>
-      <article><span class="mini-icon purple">${iconSvg('calendar')}</span><div><small>Sections</small><strong id="stuSections">—</strong><em>Active sections</em></div></article>
-    </section>
-    <section class="student-tools">
-      <div class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="stuSearch" placeholder="Search name or admission number"></div>
-      <div class="field"><select id="stuGrade"><option value="">All grades</option>${GRADES.map(g=>`<option value="${g}">Grade ${g}</option>`).join('')}</select></div>
-      <div class="field"><select id="stuSection"><option value="">All sections</option></select></div>
-    </section>
-    <section class="student-bento">
-      <article class="student-quick-card add"><div class="mini-icon orange">${iconSvg('users')}</div><h3>Add student</h3><p>Create a new library record.</p><button class="btn small" onclick="navigate('add-student')">Add student ${iconSvg('arrow')}</button></article>
-      <article class="student-quick-card find"><div class="mini-icon teal">${iconSvg('activity')}</div><h3>Find student</h3><p>Search the directory by name or admission number.</p><button class="btn small green" onclick="document.getElementById('stuSearch').focus()">Search ${iconSvg('arrow')}</button></article>
-      <div class="student-directory dashboard-card"><div class="dash-card-head"><div><div class="eyebrow">Directory</div><h2>Student records</h2></div><span class="pill" id="stuCount">0 records</span></div><div id="stuList"><div class="loading"><div class="spinner"></div>Loading…</div></div></div>
-    </section>`;
+    ${pageHead('Chapter III', 'Students', '<span id="stuCount"></span>')}
+    <label class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="stuSearch" placeholder="Search by name or admission no." aria-label="Search students"></label>
+    <div class="filter-grid">
+      <div class="field"><select id="stuGrade" aria-label="Grade"><option value="">All grades</option>${GRADES.map(g=>`<option value="${g}">Grade ${g}</option>`).join('')}</select></div>
+      <div class="field"><select id="stuSection" aria-label="Section"><option value="">All sections</option></select></div>
+    </div>
+    ${heroTab('<span id="stuHeroLabel">All students</span>', `
+      <div class="big-num"><strong id="stuTotal">—</strong><span>students</span></div>
+      <button class="btn soft small" onclick="navigate('add-student')">${iconSvg('plus')} Add student</button>`)}
+    <div class="ledger" id="stuList"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+    ${pageNum(3)}`;
 
   const search=document.getElementById('stuSearch'), gradeSel=document.getElementById('stuGrade'), sectionSel=document.getElementById('stuSection'), list=document.getElementById('stuList');
   async function refreshSections(){sectionSel.innerHTML='<option value="">All sections</option>';if(!gradeSel.value)return;const sections=await apiGet('sections',{grade:gradeSel.value});sections.forEach(s=>sectionSel.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">Section ${esc(s)}</option>`));}
   async function refreshList(){
     setLoading(list);
     const students=await apiGet('students',{search:search.value,grade:gradeSel.value,section:sectionSel.value});
-    document.getElementById('stuCount').textContent=students.length+' records';
+    document.getElementById('stuCount').textContent=students.length+(students.length===1?' reader':' readers');
     document.getElementById('stuTotal').textContent=students.length;
-    document.getElementById('stuActive').textContent=students.length;
-    document.getElementById('stuGrades').textContent=new Set(students.map(s=>String(s.grade))).size;
-    document.getElementById('stuSections').textContent=new Set(students.map(s=>String(s.section))).size;
+    document.getElementById('stuHeroLabel').textContent=gradeSel.value?('Grade '+gradeSel.value+(sectionSel.value?' · Section '+sectionSel.value:'')):'All students';
     list.innerHTML=students.length?students.map((s,i)=>`
-      <div class="student-grid-row" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})">
-        <span class="row-num">${i+1}</span><div class="avatar">${esc(initials(s.studentName))}</div>
-        <div class="student-main"><strong>${esc(s.studentName)}</strong><span>Adm# ${esc(s.admissionNumber)}</span></div>
-        <span class="student-grade">Grade ${esc(s.grade)}</span><span class="student-section">${esc(s.section)}</span>
-        <span class="pill present">Active</span>
-        <div class="student-actions"><button class="btn small ghost" onclick="event.stopPropagation();navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">Edit</button><button class="icon-button" onclick="event.stopPropagation();navigate('move-student',{id:'${esc(s.admissionNumber)}'})">${iconSvg('arrow')}</button></div>
+      <div class="ledger-row clickable" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})">
+        <span class="avatar ${tint(i)}">${esc(initials(s.studentName))}</span>
+        <div class="row-main"><strong>${esc(s.studentName)}</strong><span>Adm ${esc(s.admissionNumber)} · Grade ${esc(s.grade)} · ${esc(s.section)}</span></div>
+        <div class="row-actions">
+          <button class="btn soft tiny" onclick="event.stopPropagation();navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">Edit</button>
+          <button class="icon-btn" title="Move section" aria-label="Move section" onclick="event.stopPropagation();navigate('move-student',{id:'${esc(s.admissionNumber)}'})">${iconSvg('swap')}</button>
+        </div>
       </div>`).join(''):'<div class="empty">No students match these filters.</div>';
   }
   let timer;search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(refreshList,250)});gradeSel.addEventListener('change',async()=>{await refreshSections();refreshList()});sectionSel.addEventListener('change',refreshList);refreshList();
@@ -766,118 +683,221 @@ async function viewStudents(content){
 /* ---------------- STUDENT PROFILE ---------------- */
 async function viewProfile(content, admissionNumber) {
   const p=await apiGet('studentProfile',{admissionNumber}); const s=p.student;
+  const history=p.assessments.slice().reverse().map(a=>`
+    <div class="ledger-row column">
+      <div class="row-top">
+        <div class="row-main"><strong>Cycle ${esc(a.cycle)}</strong><span>${esc(a.date)}</span></div>
+        <span class="chip dot ${scoreClass((Number(a.overall)||0)/20)}">${esc(a.overall)}% overall</span>
+      </div>
+      <div class="mini-scores">${RUBRIC_KEYS.map(k=>`<div>${RUBRIC_LABELS[k]}<span class="dot ${scoreClass(a[k])}">${Number(a[k])||'–'}</span></div>`).join('')}</div>
+      ${a.observation?`<p class="quote">“${esc(a.observation)}”</p>`:''}
+    </div>`).join('');
   content.innerHTML=`
-    <div class="link-back" onclick="navigate('students')">← Students</div>
-    <section class="profile-hero">
-      <div class="profile-avatar">${esc(initials(s.studentName))}</div>
-      <div class="profile-identity"><div class="eyebrow">Student profile</div><h1>${esc(s.studentName)}</h1><p>Grade ${esc(s.grade)} · Section ${esc(s.section)} · Admission No. ${esc(s.admissionNumber)}</p></div>
-      <div class="profile-actions"><button class="btn" onclick="navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">${iconSvg('document')} Edit</button><button class="btn green" onclick="navigate('move-student',{id:'${esc(s.admissionNumber)}'})">${iconSvg('arrow')} Move</button></div>
-    </section>
-    <section class="profile-kpis">
-      <article class="profile-stat orange"><span>${iconSvg('check')}</span><div><small>Attendance</small><strong>${p.attendancePct}%</strong><em>Current record</em></div></article>
-      <article class="profile-stat teal"><span>${iconSvg('calendar')}</span><div><small>Sessions logged</small><strong>${p.attendanceCount}</strong><em>Library visits</em></div></article>
-      <article class="profile-stat orange"><span>${iconSvg('book')}</span><div><small>Reading assessments</small><strong>${p.assessments.length}</strong><em>Recorded cycles</em></div></article>
-    </section>
-    <section class="profile-grid">
-      <article class="dashboard-card profile-rubric-card"><div class="dash-card-head"><div><div class="eyebrow">Reading history</div><h2>Assessment timeline</h2></div><button class="btn small" onclick="navigate('assess')">${iconSvg('book')} New assessment</button></div>
-      ${p.assessments.length?p.assessments.slice().reverse().map(a=>`
-        <div class="assessment-card"><div class="assessment-head"><div><strong>Cycle ${esc(a.cycle)}</strong><span>${esc(a.date)}</span></div><span class="pill amber">${a.overall}% overall</span></div>
-        <div class="rubric-grid">${RUBRIC_KEYS.map(k=>`<div><span>${RUBRIC_LABELS[k]}</span><div class="rubric-track"><i style="width:${(a[k]||0)/5*100}%"></i></div><strong>${a[k]||0}/5</strong></div>`).join('')}</div>
-        ${a.observation?`<p class="assessment-note">${esc(a.observation)}</p>`:''}</div>`).join(''):'<div class="empty">No assessments recorded yet.</div>'}</article>
-      <aside class="dashboard-card profile-side-card"><div class="section-icon green-icon">${iconSvg('users')}</div><h2>Student information</h2><div class="info-line"><span>Grade</span><strong>${esc(s.grade)}</strong></div><div class="info-line"><span>Section</span><strong>${esc(s.section)}</strong></div><div class="info-line"><span>Admission</span><strong>${esc(s.admissionNumber)}</strong></div><div class="info-line"><span>Attendance</span><strong>${p.attendancePct}%</strong></div></aside>
-    </section>`;
+    <button class="link-back" onclick="navigate('students')">← Students</button>
+    ${pageHead('Student profile', esc(s.studentName), 'Adm '+esc(s.admissionNumber))}
+    ${heroTab(`Grade ${esc(s.grade)} · Section ${esc(s.section)}`, `
+      <div class="hero-stack">
+        <div class="big-num"><strong>${Number(p.attendancePct)||0}%</strong><span>attendance</span></div>
+        <div class="chips"><span class="chip present">${esc(p.attendanceCount)} sessions</span><span class="chip sand">${p.assessments.length} reading checks</span></div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn soft tiny" onclick="navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">Edit</button>
+        <button class="btn soft tiny" onclick="navigate('move-student',{id:'${esc(s.admissionNumber)}'})">Move</button>
+      </div>`)}
+    <div class="page-title-row"><div class="section-title">Reading history</div><button class="btn soft tiny" onclick="navigate('assess')">${iconSvg('book')} New check</button></div>
+    <div class="ledger">${history||'<div class="empty">No reading checks recorded yet.</div>'}</div>`;
 }
 
 /* ---------------- ADD / EDIT STUDENT ---------------- */
 async function viewStudentForm(content, mode, admissionNumber) {
   let existing=null;if(mode==='edit'){const p=await apiGet('studentProfile',{admissionNumber});existing=p.student;}
   const edit=mode==='edit';
+  const back=edit?`navigate('profile',{id:'${esc(admissionNumber)}'})`:`navigate('students')`;
   content.innerHTML=`
-    <div class="link-back" onclick="${edit?`navigate('profile',{id:'${esc(admissionNumber)}'})`:`navigate('students')`}">← Back</div>
-    <section class="screen-hero form-hero"><div><div class="eyebrow">${edit?'Student management':'New record'}</div><h1>${edit?'Edit student':'Add student'}</h1><p>${edit?'Update student information without changing the permanent admission key.':'Create a student record for library attendance and reading tracking.'}</p></div><div class="form-hero-icon">${iconSvg('users')}</div></section>
-    <section class="form-bento">
-      <article class="dashboard-card form-main"><div class="dash-card-head"><div><div class="eyebrow">Student details</div><h2>${edit?'Update record':'Create record'}</h2></div><span class="pill">${edit?'EDIT':'NEW'}</span></div>
-        <div class="form-grid"><div class="field wide"><label>Student name</label><input id="stuNameForm" type="text" value="${esc(existing?existing.studentName:'')}" placeholder="Full student name"></div>
-        <div class="field"><label>Admission number</label><input id="stuAdmForm" type="text" value="${esc(existing?existing.admissionNumber:'')}" placeholder="Admission number" ${edit?'readonly':''}></div>
-        <div class="field"><label>Grade</label><select id="stuGradeForm"><option value="">Select grade</option>${GRADES.map(g=>`<option value="${g}" ${existing&&String(existing.grade)===String(g)?'selected':''}>Grade ${g}</option>`).join('')}</select></div>
-        <div class="field"><label>Section</label><select id="stuSectionForm"><option value="">Select grade first</option></select></div></div>
-        <div class="form-actions"><button class="btn ghost" onclick="${edit?`navigate('profile',{id:'${esc(admissionNumber)}'})`:`navigate('students')`}">Cancel</button><button class="btn" id="studentSaveBtn">${edit?'Save changes':'Add student'} ${iconSvg('arrow')}</button></div>
-      </article>
-      <aside class="dashboard-card form-side"><div class="section-icon orange-icon">${iconSvg('check')}</div><h3>${edit?'Permanent key':'Before saving'}</h3><p>${edit?'The admission number remains locked because attendance and reading history are connected to it.':'Make sure the admission number is unique and stable before creating the record.'}</p><div class="form-tip"><span>${iconSvg('document')}</span><strong>Library record</strong><small>Attendance and reading history stay connected.</small></div></aside>
-    </section>`;
+    <button class="link-back" onclick="${back}">← Back</button>
+    ${pageHead(edit?'Student record':'New record', edit?'Edit student':'Add student', '')}
+    <div class="card stack">
+      <div class="form-grid">
+        <div class="field wide"><label for="stuNameForm">Student name</label><input id="stuNameForm" type="text" value="${esc(existing?existing.studentName:'')}" placeholder="Full student name"></div>
+        <div class="field wide"><label for="stuAdmForm">Admission number</label><input id="stuAdmForm" type="text" value="${esc(existing?existing.admissionNumber:'')}" placeholder="Admission number" ${edit?'readonly':''}></div>
+        <div class="field"><label for="stuGradeForm">Grade</label><select id="stuGradeForm"><option value="">Choose</option>${GRADES.map(g=>`<option value="${g}" ${existing&&String(existing.grade)===String(g)?'selected':''}>Grade ${g}</option>`).join('')}</select></div>
+        <div class="field"><label for="stuSectionForm">Section</label><select id="stuSectionForm"><option value="">Pick grade</option></select></div>
+      </div>
+      <p class="note">${edit?'The admission number stays locked because attendance and reading history are linked to it.':'Use a unique admission number. Attendance and reading history are linked to it.'}</p>
+      <div class="form-actions"><button class="btn soft small" onclick="${back}">Cancel</button><button class="btn small" id="studentSaveBtn">${edit?'Save changes':'Add student'}</button></div>
+    </div>`;
   const nameInput=document.getElementById('stuNameForm'),admInput=document.getElementById('stuAdmForm'),gradeSel=document.getElementById('stuGradeForm'),sectionSel=document.getElementById('stuSectionForm'),saveBtn=document.getElementById('studentSaveBtn');
-  async function loadFormSections(selected){sectionSel.innerHTML='<option value="">Select section</option>';if(!gradeSel.value)return;await loadSectionsInto(sectionSel,gradeSel.value,selected)}
+  async function loadFormSections(selected){sectionSel.innerHTML='<option value="">Choose</option>';if(!gradeSel.value)return;await loadSectionsInto(sectionSel,gradeSel.value,selected)}
   gradeSel.addEventListener('change',()=>loadFormSections(''));await loadFormSections(existing?existing.section:'');
-  saveBtn.addEventListener('click',async()=>{const studentName=nameInput.value.trim(),admission=admInput.value.trim(),grade=gradeSel.value,section=sectionSel.value.trim();if(!studentName||!admission||!grade||!section){toast('Please complete name, admission number, grade and section.');return}saveBtn.disabled=true;saveBtn.textContent=edit?'Saving…':'Adding…';try{if(edit){await apiPost('updateStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student data updated.');setTimeout(()=>navigate('profile',{id:admission}),350)}else{await apiPost('addStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student added.');setTimeout(()=>navigate('students'),350)}}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.innerHTML=(edit?'Save changes ':'Add student ')+iconSvg('arrow')}});
+  saveBtn.addEventListener('click',async()=>{const studentName=nameInput.value.trim(),admission=admInput.value.trim(),grade=gradeSel.value,section=sectionSel.value.trim();if(!studentName||!admission||!grade||!section){toast('Please complete name, admission number, grade and section.');return}saveBtn.disabled=true;saveBtn.textContent=edit?'Saving…':'Adding…';try{if(edit){await apiPost('updateStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student data updated.');setTimeout(()=>navigate('profile',{id:admission}),350)}else{await apiPost('addStudent',{admissionNumber:admission,studentName,grade,section});invalidateStudentCaches();toast('Student added.');setTimeout(()=>navigate('students'),350)}}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.textContent=edit?'Save changes':'Add student'}});
 }
 
 /* ---------------- MOVE STUDENT ---------------- */
 async function viewMoveStudent(content, admissionNumber) {
   const p=await apiGet('studentProfile',{admissionNumber}),s=p.student;
+  const back=`navigate('profile',{id:'${esc(admissionNumber)}'})`;
   content.innerHTML=`
-    <div class="link-back" onclick="navigate('profile',{id:'${esc(admissionNumber)}'})">← Back to profile</div>
-    <section class="screen-hero move-hero"><div><div class="eyebrow">Section management</div><h1>Move student</h1><p>Move this student to another section while preserving attendance and reading history.</p></div><div class="move-orb">${iconSvg('arrow')}</div></section>
-    <section class="move-bento">
-      <article class="dashboard-card current-student-card"><div class="avatar large">${esc(initials(s.studentName))}</div><div class="eyebrow">Current record</div><h2>${esc(s.studentName)}</h2><p>Admission ${esc(s.admissionNumber)}</p><div class="current-class"><span>Grade</span><strong>${esc(s.grade)}</strong><span>Section</span><strong>${esc(s.section)}</strong></div></article>
-      <article class="dashboard-card move-form-card"><div class="section-icon green-icon">${iconSvg('arrow')}</div><div class="eyebrow">Destination</div><h2>Choose new section</h2><p>Keep the same student record and move only the section.</p><div class="field"><label>Existing section</label><select id="moveSection"><option value="">Select section</option></select></div><div class="field"><label>Or enter new section</label><input id="moveNewSection" type="text" placeholder="Example: B"></div><div class="form-actions"><button class="btn ghost" onclick="navigate('profile',{id:'${esc(admissionNumber)}'})">Cancel</button><button class="btn green" id="moveSave">Move to section ${iconSvg('arrow')}</button></div></article>
-    </section>`;
+    <button class="link-back" onclick="${back}">← Back to profile</button>
+    ${pageHead('Section change', 'Move student', 'Adm '+esc(s.admissionNumber))}
+    ${heroTab('Current section', `
+      <div class="hero-stack">
+        <div class="hero-name">${esc(s.studentName)}</div>
+        <div class="chips"><span class="chip">Grade ${esc(s.grade)}</span><span class="chip">Section ${esc(s.section)}</span></div>
+      </div>`)}
+    <div class="card stack">
+      <div class="form-grid">
+        <div class="field"><label for="moveSection">Existing section</label><select id="moveSection"><option value="">Choose</option></select></div>
+        <div class="field"><label for="moveNewSection">Or a new section</label><input id="moveNewSection" type="text" placeholder="Example: B"></div>
+      </div>
+      <p class="note">The student keeps the same record. Attendance and reading history move with them.</p>
+      <div class="form-actions"><button class="btn soft small" onclick="${back}">Cancel</button><button class="btn small" id="moveSave">Move to section</button></div>
+    </div>`;
   const select=document.getElementById('moveSection'),newSection=document.getElementById('moveNewSection'),save=document.getElementById('moveSave');await loadSectionsInto(select,s.grade,'');
-  save.addEventListener('click',async()=>{const target=newSection.value.trim()||select.value.trim();if(!target){toast('Select or enter the destination section.');return}if(target===String(s.section)){toast('Choose a different section.');return}save.disabled=true;save.textContent='Moving…';try{await apiPost('moveStudent',{admissionNumber:s.admissionNumber,grade:s.grade,section:target});invalidateStudentCaches();toast('Student moved to Section '+target+'.');setTimeout(()=>navigate('profile',{id:s.admissionNumber}),350)}catch(err){toast('Could not move student: '+err.message)}finally{save.disabled=false;save.innerHTML='Move to section '+iconSvg('arrow')}});
+  save.addEventListener('click',async()=>{const target=newSection.value.trim()||select.value.trim();if(!target){toast('Select or enter the destination section.');return}if(target===String(s.section)){toast('Choose a different section.');return}save.disabled=true;save.textContent='Moving…';try{await apiPost('moveStudent',{admissionNumber:s.admissionNumber,grade:s.grade,section:target});invalidateStudentCaches();toast('Student moved to Section '+target+'.');setTimeout(()=>navigate('profile',{id:s.admissionNumber}),350)}catch(err){toast('Could not move student: '+err.message)}finally{save.disabled=false;save.textContent='Move to section'}});
 }
 
 /* ---------------- ATTENDANCE ---------------- */
 async function viewAttendance(content){
   const params=state.params||{}, date=params.date||todayStr();
   content.innerHTML=`
-    <section class="screen-hero attendance-hero">
-      <div><div class="eyebrow">Library session</div><h1>Attendance</h1><p>Mark and manage student attendance for library sessions.</p></div>
-      <div class="quick-actions"><button class="btn ghost" onclick="toast('Select a class first.')">${iconSvg('check')} Mark All Present</button><button class="btn ghost" onclick="toast('Import workflow ready for integration.')">${iconSvg('document')} Import</button><button class="btn ghost" onclick="toast('Reports can be exported from Reports.')">${iconSvg('chart')} Export</button></div>
-    </section>
-    <section class="attendance-filters dashboard-card"><div class="field"><label>Date</label><input id="attDate" type="date" value="${date}"></div><div class="field"><label>Grade</label><select id="attGrade"><option value="">Select</option>${GRADES.map(g=>`<option value="${g}" ${g===params.grade?'selected':''}>Grade ${g}</option>`).join('')}</select></div><div class="field"><label>Section</label><select id="attSection"><option value="">Select</option></select></div><button class="btn" id="attLoad">Load Students</button></section>
-    <section class="attendance-bento">
-      <article class="selected-session dashboard-card" id="attSummary"><div class="empty">Choose a date, grade and section.</div></article>
-      <article class="attendance-list dashboard-card"><div class="dash-card-head"><div><div class="eyebrow">Student list</div><h2>Attendance register</h2></div><span class="pill" id="attCount">0</span></div><div id="attList"><div class="empty">No session loaded.</div></div><button class="btn block" id="attSave" style="display:none;margin-top:1rem">Save Attendance</button></article>
-    </section>`;
+    ${pageHead('Chapter IV', 'Attendance', '<span id="attDateLabel">'+esc(shortDate(date))+'</span>')}
+    <div class="card">
+      <div class="filter-grid four">
+        <div class="field"><label for="attDate">Date</label><input id="attDate" type="date" value="${date}"></div>
+        <div class="field"><label for="attGrade">Grade</label><select id="attGrade"><option value="">Select</option>${GRADES.map(g=>`<option value="${g}" ${g===params.grade?'selected':''}>Grade ${g}</option>`).join('')}</select></div>
+        <div class="field"><label for="attSection">Section</label><select id="attSection"><option value="">Select</option></select></div>
+        <button class="btn small" id="attLoad">Open register</button>
+      </div>
+    </div>
+    <div id="attSummary"></div>
+    <div class="ledger" id="attList"><div class="empty">Choose a date, grade and section.</div></div>
+    <button class="btn block" id="attSave" hidden>Save attendance ${iconSvg('check')}</button>
+    ${pageNum(4)}`;
 
   const gradeSel=document.getElementById('attGrade'),sectionSel=document.getElementById('attSection'),dateInput=document.getElementById('attDate'),list=document.getElementById('attList'),saveBtn=document.getElementById('attSave'),summary=document.getElementById('attSummary');let currentStudents=[];
   async function refreshSections(pre){sectionSel.innerHTML='<option value="">Select</option>';if(!gradeSel.value)return;const ss=await apiGet('sections',{grade:gradeSel.value});ss.forEach(s=>sectionSel.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">Section ${esc(s)}</option>`));if(pre&&ss.includes(pre))sectionSel.value=pre}
-  async function loadClass(){if(!gradeSel.value||!sectionSel.value){summary.innerHTML='<div class="empty">Choose a date, grade and section.</div>';list.innerHTML='<div class="empty">No session loaded.</div>';saveBtn.style.display='none';return}setLoading(list);currentStudents=await apiGet('attendanceForClass',{dateStr:dateInput.value,grade:gradeSel.value,section:sectionSel.value});const present=currentStudents.filter(s=>s.status==='Present').length,absent=currentStudents.filter(s=>s.status==='Absent').length;summary.innerHTML=`<div class="selected-icon">${iconSvg('book')}</div><div><div class="eyebrow">Selected session</div><h2>Grade ${esc(gradeSel.value)} - ${esc(sectionSel.value)}</h2><p>${esc(dateInput.value)}</p></div><div class="attendance-total"><strong>${currentStudents.length}</strong><span>Total students</span></div><div class="attendance-mini"><div><strong>${present}</strong><span>Present</span></div><div><strong>${absent}</strong><span>Absent</span></div></div>`;renderList();saveBtn.style.display=currentStudents.length?'flex':'none';document.getElementById('attCount').textContent=currentStudents.length+' students'}
-  function renderList(){const present=currentStudents.filter(s=>s.status==='Present').length;list.innerHTML=currentStudents.length?currentStudents.map((s,i)=>`<div class="att-grid-row"><span class="row-num">${i+1}</span><div class="avatar">${esc(initials(s.studentName))}</div><div class="student-main"><strong>${esc(s.studentName)}</strong><span>Adm# ${esc(s.admissionNumber)}</span></div><div class="att-toggle"><button class="present ${s.status==='Present'?'on':''}" onclick="setAttStatus(${i},'Present')">Present</button><button class="absent ${s.status==='Absent'?'on':''}" onclick="setAttStatus(${i},'Absent')">Absent</button></div></div>`).join(''):'<div class="empty">No students found for this class.</div>'}
-  window.setAttStatus=(i,status)=>{currentStudents[i].status=status;renderList()};
-  saveBtn.addEventListener('click',async()=>{if(currentStudents.some(s=>!s.status)){toast('Please mark all students first.');return}saveBtn.disabled=true;saveBtn.textContent='Saving…';try{await apiPost('saveAttendance',{records:currentStudents.map(s=>({...s,date:dateInput.value,grade:gradeSel.value,section:sectionSel.value}))});toast('Attendance saved.');await loadClass()}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.textContent='Save Attendance'}});
+  function renderSummary(){
+    const present=currentStudents.filter(s=>s.status==='Present').length,absent=currentStudents.filter(s=>s.status==='Absent').length;
+    summary.innerHTML=heroTab(`Grade ${esc(gradeSel.value)} · Section ${esc(sectionSel.value)}`,`
+      <div class="hero-stack">
+        <div class="big-num"><strong>${present}</strong><span>of ${currentStudents.length}</span></div>
+        <div class="chips"><span class="chip present">${present} present</span><span class="chip absent">${absent} absent</span></div>
+      </div>
+      ${currentStudents.length?'<button class="btn soft tiny" id="attAllPresent">All present</button>':''}`);
+    const all=document.getElementById('attAllPresent');
+    if(all)all.addEventListener('click',()=>{currentStudents.forEach(s=>{s.status='Present'});renderList();renderSummary()});
+  }
+  function renderList(){list.innerHTML=currentStudents.length?currentStudents.map((s,i)=>`
+    <div class="ledger-row">
+      <span class="avatar ${tint(i)}">${esc(initials(s.studentName))}</span>
+      <div class="row-main"><strong>${esc(s.studentName)}</strong><span>Adm ${esc(s.admissionNumber)}</span></div>
+      <button class="mark present ${s.status==='Present'?'on':''}" aria-label="Present" aria-pressed="${s.status==='Present'}" onclick="setAttStatus(${i},'Present')">P</button>
+      <button class="mark absent ${s.status==='Absent'?'on':''}" aria-label="Absent" aria-pressed="${s.status==='Absent'}" onclick="setAttStatus(${i},'Absent')">A</button>
+    </div>`).join(''):'<div class="empty">No students found for this class.</div>'}
+  async function loadClass(){
+    document.getElementById('attDateLabel').textContent=shortDate(dateInput.value||todayStr());
+    if(!gradeSel.value||!sectionSel.value){summary.innerHTML='';list.innerHTML='<div class="empty">Choose a date, grade and section.</div>';saveBtn.hidden=true;return}
+    setLoading(list);
+    currentStudents=await apiGet('attendanceForClass',{dateStr:dateInput.value,grade:gradeSel.value,section:sectionSel.value});
+    renderSummary();renderList();saveBtn.hidden=!currentStudents.length;
+  }
+  window.setAttStatus=(i,status)=>{currentStudents[i].status=status;renderList();renderSummary()};
+  saveBtn.addEventListener('click',async()=>{if(currentStudents.some(s=>!s.status)){toast('Please mark all students first.');return}saveBtn.disabled=true;saveBtn.textContent='Saving…';try{await apiPost('saveAttendance',{records:currentStudents.map(s=>({...s,date:dateInput.value,grade:gradeSel.value,section:sectionSel.value}))});toast('Attendance saved.');await loadClass()}catch(err){toast('Could not save: '+err.message)}finally{saveBtn.disabled=false;saveBtn.innerHTML='Save attendance '+iconSvg('check')}});
   document.getElementById('attLoad').addEventListener('click',loadClass);gradeSel.addEventListener('change',async()=>{await refreshSections();});if(params.grade){await refreshSections(params.section);await loadClass()}
 }
 
 /* ---------------- READING ASSESSMENT ---------------- */
+const SCORE_SCALE = [['1','Rarely'],['2','Sometimes'],['3','Often'],['4','Consistent'],['5','Highly consistent']];
 async function viewAssess(content) {
   content.innerHTML=`
-    <section class="screen-hero assess-hero"><div><div class="eyebrow">Reading rubric</div><h1>Reading Assessment</h1><p>Capture the six reading dimensions with a simple visual scorecard.</p></div><div class="assess-orb">${iconSvg('book')}</div></section>
-    <section class="assess-bento">
-      <article class="dashboard-card assess-context"><div class="section-icon green-icon">${iconSvg('book')}</div><div class="eyebrow">Session setup</div><h2>Choose student</h2><div class="field"><label>Date</label><input id="asDate" type="date" value="${todayStr()}"></div><div class="field"><label>Grade</label><select id="asGrade"><option value="">Select</option>${GRADES.map(g=>`<option value="${g}">Grade ${g}</option>`).join('')}</select></div><div class="field"><label>Section</label><select id="asSection"><option value="">Select</option></select></div><div class="field"><label>Student</label><select id="asStudent"><option value="">Select grade & section first</option></select></div></article>
-      <article class="dashboard-card rubric-card" id="asForm" style="display:none"><div class="dash-card-head"><div><div class="eyebrow">Six dimensions</div><h2>Reading scorecard</h2></div><span class="pill amber">1–5 scale</span></div>
-        <div class="rubric-bento">${RUBRIC_KEYS.map(k=>`<div class="rubric-tile"><div><strong>${RUBRIC_LABELS[k]}</strong><span class="score" id="asScore_${k}">3/5</span></div><div class="dots" id="asDots_${k}">${[1,2,3,4,5].map(n=>`<button data-k="${k}" data-n="${n}">${n}</button>`).join('')}</div></div>`).join('')}</div>
-        <div class="field"><label>Observation</label><textarea id="asObs" placeholder="Notes on this student's reading session…"></textarea></div><button class="btn block" id="asSave">Save Assessment ${iconSvg('check')}</button>
-      </article>
-      <aside class="dashboard-card assess-scale"><div class="section-icon orange-icon">${iconSvg('chart')}</div><h3>Scoring guide</h3><div class="scale-line"><strong>1</strong><span>Rarely</span></div><div class="scale-line"><strong>2</strong><span>Sometimes</span></div><div class="scale-line"><strong>3</strong><span>Often</span></div><div class="scale-line"><strong>4</strong><span>Consistent</span></div><div class="scale-line"><strong>5</strong><span>Highly consistent</span></div></aside>
-    </section>`;
+    ${pageHead('Chapter V', 'Reading check', esc(shortDate(todayStr())))}
+    <div class="card">
+      <div class="form-grid">
+        <div class="field"><label for="asDate">Date</label><input id="asDate" type="date" value="${todayStr()}"></div>
+        <div class="field"><label for="asGrade">Grade</label><select id="asGrade"><option value="">Select</option>${GRADES.map(g=>`<option value="${g}">Grade ${g}</option>`).join('')}</select></div>
+        <div class="field"><label for="asSection">Section</label><select id="asSection"><option value="">Select</option></select></div>
+        <div class="field"><label for="asStudent">Student</label><select id="asStudent"><option value="">Choose grade & section</option></select></div>
+      </div>
+    </div>
+    <div class="stack" id="asForm" hidden>
+      <div id="asHero"></div>
+      <div class="ledger">${RUBRIC_KEYS.map(k=>`<div class="rubric-row"><span>${RUBRIC_LABELS[k]}</span><div class="dots" id="asDots_${k}">${[1,2,3,4,5].map(n=>`<button data-k="${k}" data-n="${n}" aria-label="${RUBRIC_LABELS[k]} ${n}">${n}</button>`).join('')}</div></div>`).join('')}</div>
+      <div class="scale">${SCORE_SCALE.map(([n,l])=>`<span class="chip dot s${n}">${n} · ${l}</span>`).join('')}</div>
+      <div class="field"><label for="asObs">Note</label><textarea id="asObs" placeholder="A note on this reading…"></textarea></div>
+      <button class="btn block" id="asSave">Save assessment ${iconSvg('check')}</button>
+    </div>
+    ${pageNum(5)}`;
   const gradeSel=document.getElementById('asGrade'),sectionSel=document.getElementById('asSection'),studentSel=document.getElementById('asStudent'),formEl=document.getElementById('asForm'),scores={};RUBRIC_KEYS.forEach(k=>scores[k]=3);
-  function paintDots(k){document.querySelectorAll(`#asDots_${k} button`).forEach(b=>b.classList.toggle('on',Number(b.dataset.n)<=scores[k]));document.getElementById(`asScore_${k}`).textContent=scores[k]+'/5'}
-  RUBRIC_KEYS.forEach(paintDots);document.querySelectorAll('.dots button').forEach(b=>b.addEventListener('click',()=>{scores[b.dataset.k]=Number(b.dataset.n);paintDots(b.dataset.k)}));
-  async function refreshSections(){sectionSel.innerHTML='<option value="">Select</option>';studentSel.innerHTML='<option value="">Select grade & section first</option>';formEl.style.display='none';if(!gradeSel.value)return;const sections=await apiGet('sections',{grade:gradeSel.value});sections.forEach(s=>sectionSel.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">Section ${esc(s)}</option>`))}
-  async function refreshStudents(){studentSel.innerHTML='<option value="">Select</option>';formEl.style.display='none';if(!gradeSel.value||!sectionSel.value)return;const students=await apiGet('students',{grade:gradeSel.value,section:sectionSel.value});students.forEach(s=>studentSel.insertAdjacentHTML('beforeend',`<option value="${esc(s.admissionNumber)}" data-name="${esc(s.studentName)}">${esc(s.studentName)}</option>`))}
-  studentSel.addEventListener('change',()=>{formEl.style.display=studentSel.value?'block':'none'});gradeSel.addEventListener('change',refreshSections);sectionSel.addEventListener('change',refreshStudents);
-  document.getElementById('asSave').addEventListener('click',async e=>{const btn=e.currentTarget;if(!studentSel.value){toast('Select a student first.');return}btn.disabled=true;btn.textContent='Saving…';try{const opt=studentSel.selectedOptions[0];await apiPost('saveReadingAssessment',{date:document.getElementById('asDate').value,admissionNumber:studentSel.value,studentName:opt.dataset.name,grade:gradeSel.value,section:sectionSel.value,observation:document.getElementById('asObs').value,...scores});toast('Assessment saved.');document.getElementById('asObs').value=''}catch(err){toast('Could not save: '+err.message)}finally{btn.disabled=false;btn.innerHTML='Save Assessment '+iconSvg('check')}});
+  function renderHero(){
+    const opt=studentSel.selectedOptions[0];if(!opt||!studentSel.value)return;
+    const avg=RUBRIC_KEYS.reduce((n,k)=>n+scores[k],0)/RUBRIC_KEYS.length;
+    document.getElementById('asHero').innerHTML=heroTab(`Grade ${esc(gradeSel.value)} · ${esc(sectionSel.value)} · Adm ${esc(studentSel.value)}`,`
+      <div class="hero-name">${esc(opt.dataset.name)}</div>
+      <div class="hero-side"><strong>${avg.toFixed(1)}</strong><span>AVERAGE</span></div>`);
+  }
+  function paintDots(k){const box=document.getElementById(`asDots_${k}`);box.className='dots s'+scores[k];box.querySelectorAll('button').forEach(b=>b.classList.toggle('on',Number(b.dataset.n)<=scores[k]))}
+  RUBRIC_KEYS.forEach(paintDots);document.querySelectorAll('.dots button').forEach(b=>b.addEventListener('click',()=>{scores[b.dataset.k]=Number(b.dataset.n);paintDots(b.dataset.k);renderHero()}));
+  async function refreshSections(){sectionSel.innerHTML='<option value="">Select</option>';studentSel.innerHTML='<option value="">Choose grade & section</option>';formEl.hidden=true;if(!gradeSel.value)return;const sections=await apiGet('sections',{grade:gradeSel.value});sections.forEach(s=>sectionSel.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">Section ${esc(s)}</option>`))}
+  async function refreshStudents(){studentSel.innerHTML='<option value="">Select</option>';formEl.hidden=true;if(!gradeSel.value||!sectionSel.value)return;const students=await apiGet('students',{grade:gradeSel.value,section:sectionSel.value});students.forEach(s=>studentSel.insertAdjacentHTML('beforeend',`<option value="${esc(s.admissionNumber)}" data-name="${esc(s.studentName)}">${esc(s.studentName)}</option>`))}
+  studentSel.addEventListener('change',()=>{formEl.hidden=!studentSel.value;renderHero()});gradeSel.addEventListener('change',refreshSections);sectionSel.addEventListener('change',refreshStudents);
+  document.getElementById('asSave').addEventListener('click',async e=>{const btn=e.currentTarget;if(!studentSel.value){toast('Select a student first.');return}btn.disabled=true;btn.textContent='Saving…';try{const opt=studentSel.selectedOptions[0];await apiPost('saveReadingAssessment',{date:document.getElementById('asDate').value,admissionNumber:studentSel.value,studentName:opt.dataset.name,grade:gradeSel.value,section:sectionSel.value,observation:document.getElementById('asObs').value,...scores});toast('Assessment saved.');document.getElementById('asObs').value=''}catch(err){toast('Could not save: '+err.message)}finally{btn.disabled=false;btn.innerHTML='Save assessment '+iconSvg('check')}});
 }
 
 /* ---------------- REPORTS ---------------- */
 async function viewReports(content){
   const month=todayStr().slice(0,7);
   content.innerHTML=`
-    <section class="screen-hero reports-hero"><div><div class="eyebrow">Monthly summary</div><h1>Reports</h1><p>View library attendance and reading progress at a glance.</p></div><div class="field report-month"><label>Month</label><input id="repMonth" type="month" value="${month}"></div></section>
-    <section class="report-kpis"><article><span class="mini-icon orange">${iconSvg('check')}</span><div><small>Students tracked</small><strong id="repStudents">—</strong></div></article><article><span class="mini-icon teal">${iconSvg('calendar')}</span><div><small>Attendance records</small><strong id="repAttendance">—</strong></div></article><article><span class="mini-icon purple">${iconSvg('book')}</span><div><small>Reading assessments</small><strong id="repReading">—</strong></div></article><article><span class="mini-icon orange">${iconSvg('chart')}</span><div><small>Avg attendance</small><strong id="repAvg">—</strong></div></article></section>
-    <section class="reports-bento"><article class="report-chart-card dashboard-card"><div class="dash-card-head"><div><div class="eyebrow">Student performance</div><h2>Monthly activity</h2></div><span class="pill">Live data</span></div><div class="report-bars" id="repBars"></div></article><article class="report-export-card dashboard-card"><div class="mini-icon orange">${iconSvg('document')}</div><h2>Export Reports</h2><p>Use the monthly data for school records and parent communication.</p><button class="btn block" onclick="toast('PDF export can be connected next.')">PDF Report</button><button class="btn green block" onclick="toast('Excel export can be connected next.')">Excel Report</button></article><article class="report-list-card dashboard-card"><div class="dash-card-head"><div><div class="eyebrow">Monthly student report</div><h2>Student insights</h2></div><span class="pill" id="repCount">0</span></div><div id="repList"><div class="loading"><div class="spinner"></div>Loading…</div></div></article></section>`;
-  async function load(){const list=document.getElementById('repList');setLoading(list);const r=await apiGet('reports',{month:document.getElementById('repMonth').value});const rows=r.students.filter(s=>s.attendanceTotal||s.assessments);const avg=rows.length?Math.round(rows.reduce((n,s)=>n+Number(s.attendancePct||0),0)/rows.length):0;document.getElementById('repStudents').textContent=rows.length;document.getElementById('repAttendance').textContent=rows.reduce((n,s)=>n+Number(s.attendanceTotal||0),0);document.getElementById('repReading').textContent=rows.reduce((n,s)=>n+Number(s.assessments||0),0);document.getElementById('repAvg').textContent=avg+'%';document.getElementById('repCount').textContent=rows.length+' students';document.getElementById('repBars').innerHTML=rows.slice(0,12).map((s,i)=>`<div class="report-bar"><span>${esc(String(s.studentName||'').split(' ')[0])}</span><i><b style="width:${Math.min(100,Number(s.attendancePct||0))}%"></b></i><strong>${Number(s.attendancePct||0)}%</strong></div>`).join('')||'<div class="empty">No monthly activity recorded.</div>';list.innerHTML=rows.length?rows.map(s=>`<div class="report-row" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})"><div class="avatar">${esc(initials(s.studentName))}</div><div class="student-main"><strong>${esc(s.studentName)}</strong><span>Grade ${esc(s.grade)} - ${esc(s.section)}</span></div><span class="pill ${Number(s.attendancePct)>=75?'present':'absent'}">${Number(s.attendancePct||0)}% att.</span><span class="pill amber">${Number(s.readingScore||0)}% read.</span></div>`).join(''):'<div class="empty">No activity recorded for this month yet.</div>'}
+    ${pageHead('Chapter VI', 'Reports', 'Monthly summary', `<div class="field month-field"><input id="repMonth" type="month" value="${month}" aria-label="Month"></div>`)}
+    <div class="stat-grid">
+      <div><span><i class="t3"></i>Students tracked</span><strong id="repStudents">—</strong></div>
+      <div><span><i class="t4"></i>Attendance records</span><strong id="repAttendance">—</strong></div>
+      <div><span><i class="t1"></i>Reading checks</span><strong id="repReading">—</strong></div>
+      <div><span><i class="t2"></i>Average attendance</span><strong id="repAvg">—</strong></div>
+    </div>
+    ${heroTab('Attendance by student', '<div class="bars" id="repBars"></div>')}
+    <div class="actions-row">
+      <button class="btn soft" onclick="toast('PDF export can be connected next.')">${iconSvg('download')} PDF</button>
+      <button class="btn soft" onclick="toast('Excel export can be connected next.')">${iconSvg('download')} Excel</button>
+    </div>
+    <div class="page-title-row"><div class="section-title">Student insights</div><span class="page-meta" id="repCount"></span></div>
+    <div class="ledger" id="repList"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+    ${pageNum(6)}`;
+  async function load(){
+    const list=document.getElementById('repList');setLoading(list);
+    const r=await apiGet('reports',{month:document.getElementById('repMonth').value});
+    const rows=r.students.filter(s=>s.attendanceTotal||s.assessments);
+    const avg=rows.length?Math.round(rows.reduce((n,s)=>n+Number(s.attendancePct||0),0)/rows.length):0;
+    document.getElementById('repStudents').textContent=rows.length;
+    document.getElementById('repAttendance').textContent=rows.reduce((n,s)=>n+Number(s.attendanceTotal||0),0);
+    document.getElementById('repReading').textContent=rows.reduce((n,s)=>n+Number(s.assessments||0),0);
+    document.getElementById('repAvg').textContent=avg+'%';
+    document.getElementById('repCount').textContent=rows.length+(rows.length===1?' student':' students');
+    document.getElementById('repBars').innerHTML=rows.slice(0,8).map(s=>{const pct=Math.min(100,Number(s.attendancePct||0));return `<div class="bar"><b>${pct}</b><i style="height:${Math.max(6,Math.round(pct*1.1))}px"></i><span>${esc(String(s.studentName||'').split(' ')[0])}</span></div>`}).join('')||'<div class="empty">No activity recorded this month.</div>';
+    list.innerHTML=rows.length?rows.map((s,i)=>`
+      <div class="ledger-row clickable" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})">
+        <span class="avatar ${tint(i)}">${esc(initials(s.studentName))}</span>
+        <div class="row-main"><strong>${esc(s.studentName)}</strong><span>Grade ${esc(s.grade)} · ${esc(s.section)}</span></div>
+        <div class="row-chips"><span class="chip ${Number(s.attendancePct)>=75?'present':'absent'}">${Number(s.attendancePct||0)}% present</span><span class="chip sand">${Number(s.readingScore||0)}% reading</span></div>
+      </div>`).join(''):'<div class="empty">No activity recorded for this month yet.</div>';
+  }
   document.getElementById('repMonth').addEventListener('change',load);load();
+}
+
+/* ---------------- cover ---------------- */
+// The book cover greets the librarian once per browser session.
+function showCover() {
+  const cover = document.getElementById('cover');
+  if (!cover) return;
+  let seen = false;
+  try { seen = sessionStorage.getItem('mmsCoverSeen') === '1'; } catch (err) {}
+  if (seen) return;
+  document.getElementById('coverDate').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' });
+  cover.hidden = false;
+  document.getElementById('openBook').addEventListener('click', () => {
+    try { sessionStorage.setItem('mmsCoverSeen', '1'); } catch (err) {}
+    cover.classList.add('leaving');
+    setTimeout(() => { cover.hidden = true; cover.classList.remove('leaving'); }, 450);
+  });
 }
 
 /* ---------------- boot ---------------- */
@@ -887,6 +907,7 @@ function boot() {
   const parts = location.hash.replace('#/','').split('/');
   state.route = parts[0] || 'dashboard';
   state.params = parts[1] ? { id: decodeURIComponent(parts[1]) } : {};
+  showCover();
   render();
 
   if ('serviceWorker' in navigator) {
