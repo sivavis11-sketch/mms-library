@@ -508,6 +508,7 @@ function iconSvg(name) {
     chart: '<path d="M4 19V9M12 19V5M20 19v-7"/><path d="M3 19h18"/>',
     check: '<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="3"/>',
     activity: '<path d="M3 12h4l2-5 4 10 2-5h6"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
     arrow: '<path d="M5 12h13M13 7l5 5-5 5"/>',
     play: '<path d="M7 4l13 8-13 8z"/>',
@@ -579,9 +580,9 @@ async function viewDashboard(content) {
       </div>`, 'with-float')}
     <div class="float-action"><button class="btn soft small" onclick="navigate('attendance')">Mark attendance <span class="knob">${iconSvg('play')}</span></button></div>
     <div class="stat-strip">
-      <div><strong>${d.timetable.length}</strong><span>Sessions today</span></div>
-      <div><strong>${totalMarked}</strong><span>Marked today</span></div>
-      <div><strong>${esc(d.cycle || '—')}</strong><span>Reading week</span></div>
+      <div><i class="stat-icon">${iconSvg('clock')}</i><strong>${d.timetable.length}</strong><span>Sessions today</span></div>
+      <div><i class="stat-icon">${iconSvg('check')}</i><strong>${totalMarked}</strong><span>Marked today</span></div>
+      <div><i class="stat-icon">${iconSvg('book')}</i><strong>${esc(d.cycle || '—')}</strong><span>Reading week</span></div>
     </div>
     <div class="section-title">Today's sessions</div>
     <div class="ledger">${sessions || '<div class="empty">No library sessions today.</div>'}</div>
