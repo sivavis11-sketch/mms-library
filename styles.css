@@ -4,8 +4,9 @@
 
 :root{
   --bg:#ECE8E1;
-  --paper:#F8F5EF;
-  --paper-in:#F1EDE5;
+  /* neumorphic: cards share the page colour and are shaped by light and shadow */
+  --paper:#ECE8E1;
+  --paper-in:#ECE8E1;
   --ink:#2A2622;
   --muted:#6E675E;
   --line:#ECE6DB;
@@ -23,11 +24,10 @@
   --score-5:#C4E2E4; --score-5-ink:#16363A;
   --tint-1:#EED8D4; --tint-2:#D9E2EA; --tint-3:#DCE5D5; --tint-4:#F0E4C8; --tint-5:#E0DAEA;
 
-  /* soft neumorphic surfaces: light shadows only */
-  --raise:4px 4px 10px rgba(170,158,140,.22),-4px -4px 10px rgba(255,255,255,.7);
-  --raise-sm:2px 2px 6px rgba(170,158,140,.2),-2px -2px 6px rgba(255,255,255,.7);
-  --inset:inset 2px 2px 5px rgba(170,158,140,.22),inset -2px -2px 5px rgba(255,255,255,.7);
-  --inset-sm:inset 1.5px 1.5px 4px rgba(170,158,140,.22),inset -1.5px -1.5px 4px rgba(255,255,255,.7);
+  --raise:6px 6px 14px rgba(170,158,140,.42),-6px -6px 14px rgba(255,255,255,.95);
+  --raise-sm:3px 3px 8px rgba(170,158,140,.42),-3px -3px 8px rgba(255,255,255,.95);
+  --inset:inset 3px 3px 7px rgba(170,158,140,.42),inset -3px -3px 7px rgba(255,255,255,.95);
+  --inset-sm:inset 2px 2px 5px rgba(170,158,140,.42),inset -2px -2px 5px rgba(255,255,255,.95);
   --orange-lift:3px 5px 12px rgba(150,70,40,.28);
 
   --font-display:'Cormorant Garamond',Georgia,serif;
@@ -73,12 +73,8 @@ svg{display:block}
   color:var(--muted);font-size:11px;font-weight:600;
 }
 #tabbar .tab svg{width:20px;height:20px;stroke-width:1.8}
-#tabbar .tab.active{color:var(--ink);font-weight:700}
+#tabbar .tab.active{color:var(--ink);font-weight:700;margin:7px 0;border-radius:16px;box-shadow:var(--inset-sm)}
 #tabbar .tab.active svg{color:var(--orange-ink)}
-#tabbar .tab.active::before{
-  content:"";position:absolute;top:0;width:12px;height:14px;background:var(--orange);
-  clip-path:polygon(0 0,100% 0,100% 100%,50% 75%,0 100%);
-}
 
 /* ---------------- page header ---------------- */
 .page-head{display:flex;flex-direction:column;gap:4px}
@@ -126,7 +122,7 @@ svg{display:block}
 .stat-strip>div+div{border-left:1px solid #E6E0D5}
 .stat-strip strong,.stat-grid strong{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1}
 .stat-strip span{font-size:11px;font-weight:500;color:var(--muted)}
-.stat-strip .stat-icon{width:26px;height:26px;margin-bottom:6px;border-radius:13px;background:var(--paper-in);color:var(--orange-ink);display:flex;align-items:center;justify-content:center}
+.stat-strip .stat-icon{width:26px;height:26px;margin-bottom:6px;border-radius:13px;background:var(--paper-in);box-shadow:var(--inset-sm);color:var(--orange-ink);display:flex;align-items:center;justify-content:center}
 .stat-strip .stat-icon svg{width:15px;height:15px}
 .stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:20px;background:var(--paper);box-shadow:var(--raise)}
 .stat-grid>div{padding:14px 16px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line)}
@@ -144,7 +140,7 @@ svg{display:block}
   font-family:var(--font-display);font-size:17px;font-weight:600;background:var(--tint-1)}
 .avatar.large{width:64px;height:64px;border-radius:32px;font-size:26px}
 .t1{background:var(--tint-1)}.t2{background:var(--tint-2)}.t3{background:var(--tint-3)}.t4{background:var(--tint-4)}.t5{background:var(--tint-5)}
-.time-block{width:58px;height:46px;flex:none;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.time-block{width:58px;height:46px;flex:none;border-radius:12px;box-shadow:var(--inset-sm);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .time-block strong{font-size:13px;font-weight:700}
 .time-block span{font-size:10px;font-weight:500}
 .chip{display:inline-flex;align-items:center;height:26px;padding:0 12px;border-radius:13px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--paper-in);color:var(--ink)}
