@@ -41,12 +41,11 @@
   --score-5:#C4E2E4; --score-5-ink:#16363A;
   --tint-1:#EED8D4; --tint-2:#D9E2EA; --tint-3:#DCE5D5; --tint-4:#F0E4C8; --tint-5:#E0DAEA;
 
-  /* flat surfaces: a fine border (drawn as a 1px ring) and a faint shadow */
-  --edge:#E2DBCF;
-  --raise:0 0 0 1px var(--edge),0 1px 3px rgba(60,45,30,.06);
-  --raise-sm:0 0 0 1px var(--edge),0 1px 2px rgba(60,45,30,.05);
-  --inset:inset 0 0 0 1px var(--edge);
-  --inset-sm:inset 0 0 0 1px var(--edge);
+  /* soft neumorphic surfaces: light shadows only */
+  --raise:4px 4px 10px rgba(170,158,140,.22),-4px -4px 10px rgba(255,255,255,.7);
+  --raise-sm:2px 2px 6px rgba(170,158,140,.2),-2px -2px 6px rgba(255,255,255,.7);
+  --inset:inset 2px 2px 5px rgba(170,158,140,.22),inset -2px -2px 5px rgba(255,255,255,.7);
+  --inset-sm:inset 1.5px 1.5px 4px rgba(170,158,140,.22),inset -1.5px -1.5px 4px rgba(255,255,255,.7);
   --orange-lift:3px 5px 12px rgba(150,70,40,.28);
 
   --font-display:'Cormorant Garamond',Georgia,serif;
@@ -71,24 +70,16 @@ svg{display:block}
 #app{padding:16px 16px 104px}
 #main{max-width:920px;margin:0 auto}
 
-/* The page of the book. Spine shadow and a fine hairline sit on the left,
-   stacked page edges on the right, and an orange ribbon marks the page. */
+/* Plain page area. An orange bookmark ribbon hangs at the top right. */
 #content{
   position:relative;min-height:calc(100vh - 136px);
-  padding:34px 22px 18px 40px;display:flex;flex-direction:column;gap:18px;
-  border-radius:6px 24px 24px 6px;
-  background:
-    linear-gradient(90deg,rgba(120,105,85,.18),rgba(120,105,85,.05) 20px,transparent 20px),
-    linear-gradient(90deg,transparent 26px,rgba(120,105,85,.12) 26px,rgba(120,105,85,.12) 27px,transparent 27px),
-    var(--paper);
-  box-shadow:3px 2px 0 -1px #F2EEE6,6px 4px 0 -2px #EAE5DB,9px 6px 0 -3px #E1DBCF,
-    14px 16px 30px rgba(150,138,120,.32),-8px -8px 20px rgba(255,255,255,.85);
+  padding:30px 4px 18px;display:flex;flex-direction:column;gap:18px;
 }
 #content::after{
-  content:"";position:absolute;top:-4px;right:36px;width:14px;height:30px;background:var(--orange);
+  content:"";position:absolute;top:-16px;right:20px;width:14px;height:34px;background:var(--orange);
   clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);
 }
-@media(min-width:720px){#content{padding:44px 40px 22px 60px}}
+@media(min-width:720px){#content{padding:36px 16px 22px}}
 
 /* ---------------- bottom navigation ---------------- */
 #tabbar{
@@ -100,7 +91,12 @@ svg{display:block}
   color:var(--muted);font-size:11px;font-weight:600;
 }
 #tabbar .tab svg{width:20px;height:20px;stroke-width:1.8}
-#tabbar .tab.active{color:var(--orange-ink);font-weight:700}
+#tabbar .tab.active{color:var(--ink);font-weight:700}
+#tabbar .tab.active svg{color:var(--orange-ink)}
+#tabbar .tab.active::before{
+  content:"";position:absolute;top:0;width:12px;height:14px;background:var(--orange);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 75%,0 100%);
+}
 
 /* ---------------- page header ---------------- */
 .page-head{display:flex;flex-direction:column;gap:4px}
