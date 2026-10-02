@@ -276,6 +276,85 @@ svg{display:block}
 .connection-error{display:flex;flex-direction:column;gap:10px}
 .connection-error p{font-size:13px;color:var(--muted)}
 
+/* ---------------- home bento ---------------- */
+/* Four columns on every screen; tiles take different spans per screen size. */
+.bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
+  grid-template-areas:
+    "hero hero hero hero"
+    "ring ring sess chk"
+    "ring ring score score"
+    "grade grade grade grade"
+    "top top tt rep"
+    "top top warn warn"}
+.b-hero{grid-area:hero;display:flex;flex-direction:column}
+.b-hero{position:relative}
+.b-hero .float-action{position:absolute;right:12px;bottom:12px;margin:0}
+.tile .stat-icon{border-radius:13px;background:var(--paper-in);box-shadow:var(--inset-sm);color:var(--orange-ink);display:flex;align-items:center;justify-content:center}
+.tile .stat-icon svg{width:13px;height:13px}
+.b-ring{grid-area:ring}.b-sess{grid-area:sess}.b-chk{grid-area:chk}.b-score{grid-area:score}
+.b-grade{grid-area:grade}.b-top{grid-area:top}.b-tt{grid-area:tt}.b-rep{grid-area:rep}.b-warn{grid-area:warn}
+@media(min-width:720px){
+  .bento{gap:16px;grid-template-areas:
+    "hero hero ring sess"
+    "hero hero chk top"
+    "grade grade score top"
+    "warn warn tt rep"}
+  .b-hero .hero-tab{flex:1}
+  .b-hero .hero-tab-body{flex:1}
+}
+.tile{min-width:0;border:0;border-radius:18px;background:var(--paper);box-shadow:var(--raise);padding:12px;display:flex;flex-direction:column;gap:8px;text-align:left;color:var(--ink)}
+.tile-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--muted)}
+.tile-label .stat-icon,.tile.tiny .stat-icon{width:26px;height:26px;margin:0;flex:none}
+.tile-label em{margin-left:auto;font-style:normal;font-weight:600}
+.tile-note{font-size:11px;color:var(--muted)}
+.tile-num{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1}
+.tile-wait{display:flex;justify-content:center;padding:8px 0}
+.tile-wait .spinner{margin:0}
+.tile.tiny{align-items:center;justify-content:center;text-align:center;gap:4px;padding:10px 4px}
+.tile.tiny strong{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1}
+.tile.tiny span{font-size:10px;font-weight:600;color:var(--muted)}
+.tile.link{cursor:pointer}
+.tile.link:active{box-shadow:var(--inset)}
+.b-ring{align-items:center;text-align:center}
+.b-ring .tile-label{align-self:stretch}
+.ring{width:100%;max-width:96px;height:auto}
+.ring-track{stroke:#D9D2C6}
+.ring-value{stroke:var(--orange-ink)}
+.ring text{font-family:var(--font-display);font-size:22px;font-weight:600;fill:var(--ink)}
+.delta{font-family:var(--font-body);font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle}
+.delta.up{color:var(--present-ink)}.delta.down{color:var(--absent-ink)}
+.spark{width:100%;height:40px}
+.spark-area{fill:rgba(255,51,0,.1)}
+.spark-line{fill:none;stroke:var(--orange-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.spark-dot{fill:var(--orange-ink)}
+.grade-bars{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:80px}
+.grade-bars>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--muted)}
+.grade-bars i{width:100%;max-width:18px;border-radius:6px;background:#E9A27E}
+.grade-bars i.lo{background:var(--orange)}
+.mini-row{width:100%;border:0;background:none;padding:4px 0;display:flex;align-items:center;gap:8px;text-align:left;color:var(--ink)}
+.mini-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.mini-main strong{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-main span{font-size:10px;color:var(--muted)}
+.mini-row em{font-style:normal;font-size:12px;font-weight:700;color:var(--orange-ink)}
+.b-warn .mini-row em{color:var(--absent-ink)}
+.avatar.small{width:28px;height:28px;border-radius:14px;font-size:12px;box-shadow:var(--inset-sm)}
+
+/* ---------------- reading progress ---------------- */
+.reading-search{height:48px;padding:0 16px;border-radius:24px;background:var(--paper-in);box-shadow:var(--inset)}
+.progress-bars{display:flex;align-items:flex-end;justify-content:space-around;gap:10px;height:130px}
+.progress-bars>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.progress-bars b{font-size:12px;color:var(--ink)}
+.progress-bars i{width:22px;border-radius:9px;background:#E9A27E;box-shadow:var(--inset-sm)}
+.progress-bars .last i{background:var(--orange)}
+.skill-card{display:flex;flex-direction:column;gap:12px}
+.skill-row{display:grid;grid-template-columns:104px 1fr 34px;align-items:center;gap:10px;font-size:12px}
+.skill-row span{font-weight:600;color:var(--muted)}
+.skill-row b{text-align:right}
+.skill-track{height:12px;border-radius:6px;box-shadow:var(--inset-sm);padding:2px}
+.skill-track i{display:block;height:100%;border-radius:4px;background:var(--score-3)}
+.skill-track i.s1{background:var(--score-1)}.skill-track i.s2{background:var(--score-2)}.skill-track i.s3{background:var(--score-3)}
+.skill-track i.s4{background:var(--score-4)}.skill-track i.s5{background:var(--score-5)}
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ---------------- small layout helpers ---------------- */
