@@ -419,7 +419,7 @@ function setupBanner() {
 }
 
 /* ---------------- router ---------------- */
-const routes = ['dashboard','timetable','students','attendance','reports','profile','assess','add-student','edit-student','move-student'];
+const routes = ['dashboard','timetable','students','attendance','reports','reading','profile','assess','add-student','edit-student','move-student'];
 
 function navigate(route, params) {
   state.route = route;
@@ -478,6 +478,7 @@ async function render() {
     else if (state.route === 'move-student') await viewMoveStudent(content, state.params.id);
     else if (state.route === 'profile') await viewProfile(content, state.params.id);
     else if (state.route === 'attendance') await viewAttendance(content);
+    else if (state.route === 'reading') await viewReading(content);
     else if (state.route === 'assess') await viewAssess(content);
     else if (state.route === 'reports') await viewReports(content);
     else content.innerHTML = '<div class="empty">Not found.</div>';
@@ -508,6 +509,9 @@ function iconSvg(name) {
     chart: '<path d="M4 19V9M12 19V5M20 19v-7"/><path d="M3 19h18"/>',
     check: '<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="3"/>',
     activity: '<path d="M3 12h4l2-5 4 10 2-5h6"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/>',
+    alert: '<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
     clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
     arrow: '<path d="M5 12h13M13 7l5 5-5 5"/>',
@@ -551,14 +555,83 @@ function scoreClass(n) {
   return v >= 1 && v <= 5 ? 's' + v : '';
 }
 
-/* ---------------- DASHBOARD ---------------- */
+/* ---------------- DASHBOARD (bento) ---------------- */
+function monthShift(month, delta) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function monthLabel(month) {
+  return new Date(month + '-15T12:00:00').toLocaleDateString('en-IN', { month: 'short' });
+}
+function avgOf(list) { return list.length ? Math.round(list.reduce((n, v) => n + v, 0) / list.length) : 0; }
+
+// Summary figures for one month of the 'reports' API.
+function summarizeMonth(r) {
+  const students = (r && r.students) || [];
+  const attended = students.filter(s => Number(s.attendanceTotal) > 0);
+  const read = students.filter(s => Number(s.assessments) > 0);
+  const byGrade = {};
+  attended.forEach(s => {
+    const g = byGrade[s.grade] || (byGrade[s.grade] = { present: 0, total: 0 });
+    g.present += Number(s.present || 0);
+    g.total += Number(s.attendanceTotal || 0);
+  });
+  return {
+    avgAttendance: avgOf(attended.map(s => Number(s.attendancePct || 0))),
+    readingChecks: read.reduce((n, s) => n + Number(s.assessments || 0), 0),
+    readingScore: read.length ? avgOf(read.map(s => Number(s.readingScore || 0))) : null,
+    grades: Object.keys(byGrade).sort((a, b) => Number(a) - Number(b) || a.localeCompare(b))
+      .map(g => ({ grade: g, pct: Math.round(byGrade[g].present / byGrade[g].total * 100) })),
+    topReaders: read.slice().sort((a, b) => Number(b.readingScore) - Number(a.readingScore)),
+    lowAttendance: attended.filter(s => Number(s.attendancePct) < 75)
+      .sort((a, b) => Number(a.attendancePct) - Number(b.attendancePct))
+  };
+}
+
+function ringSvg(pct) {
+  const r = 34, c = 2 * Math.PI * r, off = c * (1 - Math.min(100, Math.max(0, pct)) / 100);
+  return `<svg class="ring" viewBox="0 0 84 84" aria-hidden="true">
+    <circle cx="42" cy="42" r="${r}" fill="none" class="ring-track" stroke-width="9"/>
+    <circle cx="42" cy="42" r="${r}" fill="none" class="ring-value" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 42 42)"/>
+    <text x="42" y="44" text-anchor="middle" dominant-baseline="middle">${pct}%</text></svg>`;
+}
+
+function sparkSvg(values) {
+  const w = 160, h = 40;
+  if (values.length < 2) return '';
+  const lo = Math.min(...values) - 5, hi = Math.max(...values) + 5;
+  const pts = values.map((v, i) => [4 + i * (w - 8) / (values.length - 1), h - 4 - (v - lo) / (hi - lo) * (h - 10)]);
+  const line = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polygon class="spark-area" points="4,${h} ${line} ${w - 4},${h}"/>
+    <polyline class="spark-line" points="${line}"/>
+    <circle class="spark-dot" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.2"/></svg>`;
+}
+
+function personRow(s, i, value, route) {
+  return `<button class="mini-row" onclick="navigate('${route}',{id:'${esc(s.admissionNumber)}'})">
+    <span class="avatar small ${tint(i)}">${esc(initials(s.studentName))}</span>
+    <span class="mini-main"><strong>${esc(s.studentName)}</strong><span>${esc(s.grade)} ${esc(s.section)}</span></span>
+    <em>${value}</em></button>`;
+}
+
+let dashboardRender = 0;
 async function viewDashboard(content) {
+  const mine = ++dashboardRender;
   if (!apiConfigured()) {
     content.innerHTML = pageHead('Welcome', 'MMS Library', esc(shortDate(todayStr()))) + setupBanner();
     return;
   }
 
-  const d = await apiGet('dashboard', { date: todayStr() });
+  const today = todayStr(), month = today.slice(0, 7);
+  // Start this month's report straight away; the bento fills in when it arrives.
+  const reportReq = apiGet('reports', { month }).catch(() => null);
+
+  const d = await apiGet('dashboard', { date: today });
+  if (mine !== dashboardRender || state.route !== 'dashboard') return; // a newer render owns the page
   if (!d) throw new Error('The library server returned no data for the dashboard.');
   if (!Array.isArray(d.timetable)) d.timetable = [];
   const present = Number(d.present || 0), absent = Number(d.absent || 0);
@@ -571,26 +644,148 @@ async function viewDashboard(content) {
       <button class="icon-btn" aria-label="Open attendance" onclick="navigate('attendance',{grade:'${esc(t.grade)}',section:'${esc(t.section)}'})">${iconSvg('arrow')}</button>
     </div>`).join('');
 
+  const waiting = '<div class="tile-wait"><div class="spinner"></div></div>';
   content.innerHTML = `
-    ${pageHead('Chapter I', greeting(), esc(shortDate(todayStr())))}
-    ${heroTab('Attendance today', `
-      <div class="hero-stack">
-        <div class="big-num"><strong>${present}</strong><span>of ${totalMarked}</span></div>
-        <div class="chips"><span class="chip present">${present} present</span><span class="chip absent">${absent} absent</span></div>
-      </div>`, 'with-float')}
-    <div class="float-action"><button class="btn soft small" onclick="navigate('attendance')">Mark attendance <span class="knob">${iconSvg('play')}</span></button></div>
-    <div class="stat-strip">
-      <div><i class="stat-icon">${iconSvg('clock')}</i><strong>${d.timetable.length}</strong><span>Sessions today</span></div>
-      <div><i class="stat-icon">${iconSvg('check')}</i><strong>${totalMarked}</strong><span>Marked today</span></div>
-      <div><i class="stat-icon">${iconSvg('book')}</i><strong>${esc(d.cycle || '—')}</strong><span>Reading week</span></div>
+    ${pageHead('Chapter I', greeting(), esc(shortDate(today)))}
+    <div class="bento">
+      <div class="bt b-hero">
+        ${heroTab('Attendance today', `
+          <div class="hero-stack">
+            <div class="big-num"><strong>${present}</strong><span>of ${totalMarked}</span></div>
+            <div class="chips"><span class="chip present">${present} present</span><span class="chip absent">${absent} absent</span></div>
+          </div>`, 'with-float')}
+        <div class="float-action"><button class="btn soft small" onclick="navigate('attendance')">Mark attendance <span class="knob">${iconSvg('play')}</span></button></div>
+      </div>
+      <div class="bt tile b-ring"><div class="tile-label"><i class="stat-icon">${iconSvg('check')}</i>Avg attendance</div><div id="bRing">${waiting}</div><span class="tile-note">${esc(monthLabel(month))} so far</span></div>
+      <div class="bt tile tiny b-sess"><i class="stat-icon">${iconSvg('clock')}</i><strong>${d.timetable.length}</strong><span>Sessions</span></div>
+      <div class="bt tile tiny b-chk"><i class="stat-icon">${iconSvg('book')}</i><strong id="bChecks">—</strong><span>Checks</span></div>
+      <div class="bt tile b-score"><div class="tile-label"><i class="stat-icon">${iconSvg('book')}</i>Reading score</div><div id="bScore">${waiting}</div></div>
+      <div class="bt tile b-grade"><div class="tile-label"><i class="stat-icon">${iconSvg('chart')}</i>Attendance by grade<em>${esc(monthLabel(month))}</em></div><div id="bGrades">${waiting}</div></div>
+      <div class="bt tile b-top"><div class="tile-label"><i class="stat-icon">${iconSvg('star')}</i>Top readers</div><div id="bTop">${waiting}</div></div>
+      <button class="bt tile tiny link b-tt" onclick="navigate('timetable')"><i class="stat-icon">${iconSvg('calendar')}</i><span>Timetable</span></button>
+      <button class="bt tile tiny link b-rep" onclick="navigate('reports')"><i class="stat-icon">${iconSvg('download')}</i><span>Report</span></button>
+      <div class="bt tile b-warn"><div class="tile-label"><i class="stat-icon">${iconSvg('alert')}</i>Below 75%</div><div id="bLow">${waiting}</div></div>
     </div>
     <div class="section-title">Today's sessions</div>
     <div class="ledger">${sessions || '<div class="empty">No library sessions today.</div>'}</div>
-    <div class="actions-row">
-      <button class="btn soft" onclick="navigate('assess')">${iconSvg('book')} Reading</button>
-      <button class="btn soft" onclick="navigate('students')">${iconSvg('users')} Students</button>
-    </div>
     ${pageNum(1)}`;
+
+  // A newer render (or another page) has taken over; don't paint stale numbers.
+  const stale = () => mine !== dashboardRender || state.route !== 'dashboard' || !document.getElementById('bRing');
+  const report = await reportReq;
+  if (stale()) return;
+  const cur = report ? summarizeMonth(report) : null;
+  const fill = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  if (!cur) {
+    ['bRing', 'bScore', 'bGrades', 'bTop', 'bLow'].forEach(id => fill(id, '<span class="tile-note">Couldn\'t load</span>'));
+    return;
+  }
+  const wide = window.matchMedia('(min-width:720px)').matches;
+
+  fill('bRing', cur.grades.length ? ringSvg(cur.avgAttendance) : '<span class="tile-note">No attendance marked yet.</span>');
+  document.getElementById('bChecks').textContent = cur.readingChecks;
+
+  if (cur.readingScore == null) {
+    fill('bScore', '<span class="tile-note">No reading checks this month yet.</span>');
+  } else {
+    fill('bScore', `<div class="tile-num">${cur.readingScore}%</div>`);
+  }
+
+  fill('bGrades', cur.grades.length
+    ? `<div class="grade-bars">${cur.grades.map(g => `<div title="Grade ${esc(g.grade)}: ${g.pct}%"><i class="${g.pct < 80 ? 'lo' : ''}" style="height:${Math.max(6, Math.round(g.pct * 0.6))}px"></i><span>${esc(g.grade)}</span></div>`).join('')}</div>`
+    : '<span class="tile-note">No attendance marked this month yet.</span>');
+
+  const topN = wide ? 4 : 3, lowN = wide ? 3 : 2;
+  fill('bTop', cur.topReaders.length
+    ? cur.topReaders.slice(0, topN).map((s, i) => personRow(s, i + 1, Number(s.readingScore) + '%', 'reading')).join('')
+    : '<span class="tile-note">No reading checks this month yet.</span>');
+  fill('bLow', cur.lowAttendance.length
+    ? cur.lowAttendance.slice(0, lowN).map((s, i) => personRow(s, i + 1, Number(s.attendancePct) + '%', 'profile')).join('')
+    : '<span class="tile-note">Everyone is at 75% or above.</span>');
+
+  // The trend line needs the two previous months; load them last so the tiles above aren't held up.
+  if (cur.readingScore == null) return;
+  const earlier = await Promise.all([-2, -1].map(n => apiGet('reports', { month: monthShift(month, n) }).catch(() => null)));
+  if (stale()) return;
+  const scores = earlier.map(r => r && summarizeMonth(r).readingScore).filter(v => v != null).concat(cur.readingScore);
+  const prev = scores.length > 1 ? scores[scores.length - 2] : null;
+  const delta = prev == null ? '' : `<span class="delta ${cur.readingScore >= prev ? 'up' : 'down'}">${cur.readingScore >= prev ? '+' : ''}${cur.readingScore - prev}</span>`;
+  fill('bScore', `<div class="tile-num">${cur.readingScore}%${delta}</div>${sparkSvg(scores)}`);
+}
+
+/* ---------------- READING (one student) ---------------- */
+async function viewReading(content) {
+  content.innerHTML = `
+    ${pageHead('Chapter V', 'Reading', 'Student progress', `<button class="btn soft tiny" onclick="navigate('assess')">${iconSvg('plus')} New check</button>`)}
+    <label class="searchbox reading-search">${iconSvg('search')}<input id="rdSearch" type="search" placeholder="Search a student by name or admission number" autocomplete="off" aria-label="Search student"></label>
+    <div id="rdResults"></div>
+    <div id="rdBody"></div>
+    ${pageNum(5)}`;
+  const input = document.getElementById('rdSearch'), results = document.getElementById('rdResults'), body = document.getElementById('rdBody');
+  let timer, seq = 0;
+
+  async function search() {
+    const q = input.value.trim(), mine = ++seq;
+    if (q.length < 2) { results.innerHTML = ''; return; }
+    setLoading(results);
+    const list = await apiGet('students', { search: q }).catch(() => []);
+    if (mine !== seq) return;
+    results.innerHTML = list.length
+      ? `<div class="ledger">${list.slice(0, 8).map((s, i) => `
+          <div class="ledger-row clickable" data-id="${esc(s.admissionNumber)}">
+            <span class="avatar ${tint(i)}">${esc(initials(s.studentName))}</span>
+            <div class="row-main"><strong>${esc(s.studentName)}</strong><span>Grade ${esc(s.grade)} · ${esc(s.section)} · Adm ${esc(s.admissionNumber)}</span></div>
+          </div>`).join('')}</div>`
+      : '<div class="empty">No students found.</div>';
+    results.querySelectorAll('[data-id]').forEach(row => row.addEventListener('click', () => {
+      results.innerHTML = ''; input.value = '';
+      navigate('reading', { id: row.dataset.id });
+    }));
+  }
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
+
+  const id = state.params.id;
+  if (!id) {
+    body.innerHTML = '<div class="empty">Search for a student to see their reading progress.</div>';
+    return;
+  }
+  setLoading(body);
+  const p = await apiGet('studentProfile', { admissionNumber: id });
+  const s = p.student, checks = p.assessments || [];
+  if (!checks.length) {
+    body.innerHTML = heroTab(`${esc(s.studentName)} · Adm ${esc(s.admissionNumber)}`, `
+        <div class="hero-name">${esc(s.studentName)}</div>
+        <div class="chips"><span class="chip sand">Grade ${esc(s.grade)} · ${esc(s.section)}</span></div>`) +
+      `<div class="empty">No reading checks recorded for ${esc(s.studentName)} yet.</div>
+       <button class="btn soft" onclick="navigate('assess')">${iconSvg('book')} Record a reading check</button>`;
+    return;
+  }
+  const latest = checks[checks.length - 1], prev = checks.length > 1 ? checks[checks.length - 2] : null;
+  const change = prev ? Number(latest.overall) - Number(prev.overall) : null;
+  const recent = checks.slice(-6);
+  const label = a => new Date(a.date + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+  body.innerHTML = `
+    ${heroTab(`${esc(s.studentName)} · Adm ${esc(s.admissionNumber)}`, `
+      <div class="hero-stack">
+        <div class="big-num"><strong>${Number(latest.overall) || 0}%</strong><span>overall</span></div>
+        <div class="chips">
+          ${change == null ? '' : `<span class="chip ${change >= 0 ? 'present' : 'absent'}">${change >= 0 ? '+' : ''}${change} since last check</span>`}
+          <span class="chip sand">${checks.length} reading ${checks.length === 1 ? 'check' : 'checks'}</span>
+        </div>
+      </div>
+      <div class="hero-actions"><button class="btn soft tiny" onclick="navigate('profile',{id:'${esc(s.admissionNumber)}'})">Profile</button></div>`)}
+    <div class="section-title">Progress</div>
+    <div class="card progress-card">
+      <div class="progress-bars">${recent.map((a, i) => `
+        <div class="${i === recent.length - 1 ? 'last' : ''}"><b>${Number(a.overall) || 0}</b><i style="height:${Math.max(6, Math.round((Number(a.overall) || 0) * 0.9))}px"></i><span>${esc(label(a))}</span></div>`).join('')}</div>
+    </div>
+    <div class="section-title">Latest check · ${esc(label(latest))}</div>
+    <div class="card skill-card">
+      ${RUBRIC_KEYS.map(k => { const v = Number(latest[k]) || 0; return `
+        <div class="skill-row"><span>${RUBRIC_LABELS[k]}</span><div class="skill-track"><i class="s${Math.round(v)}" style="width:${v * 20}%"></i></div><b>${v || '–'}/5</b></div>`; }).join('')}
+      ${latest.observation ? `<p class="quote">“${esc(latest.observation)}”</p>` : ''}
+    </div>`;
 }
 
 /* ---------------- TIMETABLE ---------------- */
