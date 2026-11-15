@@ -899,9 +899,17 @@ async function viewProfile(content, admissionNumber) {
       <div class="hero-actions">
         <button class="btn soft tiny" onclick="navigate('edit-student',{id:'${esc(s.admissionNumber)}'})">Edit</button>
         <button class="btn soft tiny" onclick="navigate('move-student',{id:'${esc(s.admissionNumber)}'})">Move</button>
+        <button class="btn soft tiny" id="removeStudent">Remove</button>
       </div>`)}
     <div class="page-title-row"><div class="section-title">Reading history</div><button class="btn soft tiny" onclick="navigate('assess')">${iconSvg('book')} New check</button></div>
     <div class="ledger">${history||'<div class="empty">No reading checks recorded yet.</div>'}</div>`;
+  const removeBtn=document.getElementById('removeStudent');
+  removeBtn.addEventListener('click',async()=>{
+    if(!confirm(`Remove ${s.studentName} (Adm ${s.admissionNumber}) from the student list?\n\nTheir old attendance and reading records stay in the sheet.`))return;
+    removeBtn.disabled=true;removeBtn.textContent='Removing…';
+    try{await apiPost('deleteStudent',{admissionNumber:s.admissionNumber});invalidateStudentCaches();toast('Student removed.');setTimeout(()=>navigate('students'),350)}
+    catch(err){toast('Could not remove student: '+err.message);removeBtn.disabled=false;removeBtn.textContent='Remove'}
+  });
 }
 
 /* ---------------- ADD / EDIT STUDENT ---------------- */

@@ -101,6 +101,9 @@ function libraryApiPost_(action, payload) {
     case 'moveStudent':
       return moveStudent(p);
 
+    case 'deleteStudent':
+      return deleteStudent(p);
+
     default:
       throw new Error('Unknown POST action: ' + a);
   }
